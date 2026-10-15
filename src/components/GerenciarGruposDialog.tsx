@@ -55,7 +55,7 @@ export function GerenciarGruposDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-white/10 bg-[#111113] sm:max-w-lg">
+      <DialogContent className="rounded-2xl border-white/10 bg-[#111113] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Gerenciar grupos</DialogTitle>
           <DialogDescription>
@@ -91,7 +91,7 @@ export function GerenciarGruposDialog({
                       disabled={pending.has(g.id)}
                       onCheckedChange={(c) => void toggle(g, c)}
                       aria-label={`Visibilidade de ${g.nome ?? g.jid}`}
-                      className="data-[state=checked]:bg-[#22c55e]"
+                      className="data-[state=checked]:bg-[#80d7f8]!"
                     />
                   </div>
                 </li>

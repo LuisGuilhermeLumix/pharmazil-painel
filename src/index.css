@@ -50,7 +50,7 @@
 
 :root,
 .dark {
-    --background: oklch(0.13 0 0);
+    --background: #0a0a0a;
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.17 0 0);
     --card-foreground: oklch(0.985 0 0);

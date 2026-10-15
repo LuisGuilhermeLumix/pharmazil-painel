@@ -43,6 +43,30 @@ export function sanitizeFileName(name: string): string {
   return clean || 'imagem'
 }
 
+export const ACCENT_PALETTE = [
+  '#80d7f8',
+  '#e65ff5',
+  '#22c55e',
+  '#f59e0b',
+  '#f97316',
+  '#a78bfa',
+  '#ec4899',
+  '#3b82f6',
+] as const
+
+/** Cor estável por hash do nome (atendentes, séries, etc.). */
+export function getAccentColor(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return ACCENT_PALETTE[h % ACCENT_PALETTE.length]
+}
+
+export const ETAPA_COLORS: Record<number, string> = { 1: '#f59e0b', 2: '#3b82f6', 3: '#a78bfa' }
+
+export function getEtapaColor(etapa: number): string {
+  return ETAPA_COLORS[etapa] ?? '#6b7280'
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`

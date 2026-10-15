@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
+import { Panel } from '@/components/Panel'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { FollowupStatusBadge } from '@/components/StatusBadge'
 import { Pagination } from '@/components/Pagination'
 import type { FollowupRow } from '@/hooks/useFollowupMetrics'
 import { formatDateTime } from '@/lib/dates'
-import { formatPhone } from '@/lib/format'
+import { formatPhone, getAccentColor, getEtapaColor } from '@/lib/format'
 
 const PAGE_SIZE = 25
+const HEADERS = ['Data', 'Lead', 'Telefone', 'Atendente', 'Etapa', 'Status', 'Mensagem']
+
+export const TH = 'px-3 pb-2 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500'
+export const TR = 'border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]'
+export const TD = 'px-3 py-3.5 text-sm'
 
 interface FollowupTableProps {
   rows: FollowupRow[]
@@ -39,91 +44,95 @@ export function FollowupTable({ rows, loading }: FollowupTableProps) {
   const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02]">
-      <div className="flex items-center justify-between gap-4 px-6 py-4">
+    <Panel>
+      <div className="mb-3 flex items-center justify-between gap-4">
         <h3 className="text-sm font-semibold text-white">Últimos follow-ups</h3>
         <div className="relative w-64">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-gray-500" />
+          <Search size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-500" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome ou telefone"
-            className="h-8 border-white/10 bg-white/[0.02] pl-8 text-xs text-white placeholder:text-gray-500"
+            className="h-8 w-64 rounded-lg border-white/10 bg-white/[0.03] pl-8 text-xs text-white placeholder:text-gray-500"
           />
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="border-white/10 hover:bg-transparent">
-            {['Data', 'Lead', 'Telefone', 'Atendente', 'Etapa', 'Status', 'Mensagem'].map((h) => (
-              <TableHead key={h} className="h-9 px-6 text-xs font-medium uppercase tracking-wide text-gray-400">
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <TableRow key={i} className="border-white/5 hover:bg-transparent">
-                {Array.from({ length: 7 }).map((__, j) => (
-                  <TableCell key={j} className="px-6 py-3">
-                    <Skeleton className="h-4 w-full bg-white/5" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : pageRows.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
-                {search ? 'Nenhum resultado para a busca' : 'Nenhum follow-up no período'}
-              </TableCell>
-            </TableRow>
-          ) : (
-            pageRows.map((r) => (
-              <TableRow key={r.id} className="border-white/5 hover:bg-white/[0.03]">
-                <TableCell className="px-6 py-3 text-sm whitespace-nowrap text-gray-300">
-                  {formatDateTime(r.enviado_em)}
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate px-6 py-3 text-sm font-medium text-white">
-                  {r.lead}
-                </TableCell>
-                <TableCell className="px-6 py-3 text-sm whitespace-nowrap text-gray-300">
-                  {formatPhone(r.telefone)}
-                </TableCell>
-                <TableCell className="px-6 py-3 text-sm whitespace-nowrap text-gray-300">{r.atendente}</TableCell>
-                <TableCell className="px-6 py-3 text-sm text-gray-300">
-                  <span className="inline-flex items-center rounded-md bg-white/5 px-2 py-0.5 text-xs font-medium text-gray-200">
-                    Etapa {r.etapa}
-                  </span>
-                </TableCell>
-                <TableCell className="px-6 py-3">
-                  <FollowupStatusBadge status={r.status} />
-                </TableCell>
-                <TableCell className="max-w-[320px] px-6 py-3 text-sm text-gray-400">
-                  {r.mensagem ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="block cursor-default truncate">{r.mensagem}</span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-sm whitespace-pre-wrap">
-                        {r.mensagem}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <span className="text-gray-600">—</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {HEADERS.map((h) => (
+                <th key={h} className={TH}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className={TR}>
+                  {HEADERS.map((h) => (
+                    <td key={h} className={TD}>
+                      <Skeleton className="h-4 w-full bg-white/5" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : pageRows.length === 0 ? (
+              <tr>
+                <td colSpan={HEADERS.length} className="px-3 py-10 text-center text-sm text-gray-500">
+                  {search ? 'Nenhum resultado para a busca' : 'Nenhum follow-up no período'}
+                </td>
+              </tr>
+            ) : (
+              pageRows.map((r) => (
+                <tr key={r.id} className={TR}>
+                  <td className={`${TD} whitespace-nowrap text-gray-300 tabular-nums`}>{formatDateTime(r.enviado_em)}</td>
+                  <td className={`${TD} max-w-[200px] truncate font-medium text-white`}>{r.lead}</td>
+                  <td className={`${TD} whitespace-nowrap text-gray-300 tabular-nums`}>{formatPhone(r.telefone)}</td>
+                  <td className={`${TD} whitespace-nowrap text-gray-300`}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getAccentColor(r.atendente) }} />
+                      {r.atendente}
+                    </span>
+                  </td>
+                  <td className={TD}>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium"
+                      style={{ backgroundColor: `${getEtapaColor(r.etapa)}26`, color: getEtapaColor(r.etapa) }}
+                    >
+                      Etapa {r.etapa}
+                    </span>
+                  </td>
+                  <td className={TD}>
+                    <FollowupStatusBadge status={r.status} />
+                  </td>
+                  <td className={`${TD} max-w-[320px] text-gray-400`}>
+                    {r.mensagem ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="block cursor-default truncate">{r.mensagem}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-sm whitespace-pre-wrap">
+                          {r.mensagem}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-gray-600">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {!loading && filtered.length > 0 && (
         <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
       )}
-    </div>
+    </Panel>
   )
 }

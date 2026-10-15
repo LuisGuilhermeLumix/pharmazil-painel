@@ -1,5 +1,4 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface PaginationProps {
   page: number
@@ -8,40 +7,29 @@ interface PaginationProps {
   onChange: (page: number) => void
 }
 
+const PILL =
+  'inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-gray-300 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/[0.03]'
+
 export function Pagination({ page, pageSize, total, onChange }: PaginationProps) {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const from = total === 0 ? 0 : page * pageSize + 1
   const to = Math.min(total, (page + 1) * pageSize)
 
   return (
-    <div className="flex items-center justify-between border-t border-white/10 px-6 py-3 text-xs text-gray-400">
+    <div className="mt-3 flex items-center justify-between pt-3 text-xs text-gray-500 tabular-nums">
       <span>
         {from}–{to} de {total}
       </span>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-gray-400 hover:bg-white/5 hover:text-white"
-          disabled={page <= 0}
-          onClick={() => onChange(page - 1)}
-          aria-label="Página anterior"
-        >
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="px-2">
+      <div className="flex items-center gap-1.5">
+        <button type="button" className={PILL} disabled={page <= 0} onClick={() => onChange(page - 1)} aria-label="Página anterior">
+          <ChevronLeft size={14} />
+        </button>
+        <span className="px-1.5">
           {page + 1} / {pages}
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-gray-400 hover:bg-white/5 hover:text-white"
-          disabled={page >= pages - 1}
-          onClick={() => onChange(page + 1)}
-          aria-label="Próxima página"
-        >
-          <ChevronRight className="size-4" />
-        </Button>
+        <button type="button" className={PILL} disabled={page >= pages - 1} onClick={() => onChange(page + 1)} aria-label="Próxima página">
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
   )

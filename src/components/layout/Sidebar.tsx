@@ -1,12 +1,15 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { LogOut, MessageSquareReply, Send } from 'lucide-react'
+import { LayoutDashboard, LogOut, Send } from 'lucide-react'
 import { signOut } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 const links = [
-  { to: '/', label: 'Follow-up', icon: MessageSquareReply },
+  { to: '/', label: 'Follow-up', icon: LayoutDashboard },
   { to: '/disparo', label: 'Disparo em grupos', icon: Send },
 ] as const
+
+const ITEM =
+  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-gray-100'
 
 export function Sidebar() {
   const navigate = useNavigate()
@@ -17,47 +20,36 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-white/10 bg-[#0b0b0c]">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <img src="/lumix.svg" alt="Lumix" className="size-9 rounded-xl" />
-        <div className="leading-tight">
-          <div className="text-sm font-semibold text-white">Lumix - Pharmazil</div>
-          <div className="text-[11px] text-gray-500">Painel interno</div>
-        </div>
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-44 flex-col border-r border-white/[0.06] bg-[#0a0a0a]">
+      <div className="flex items-center border-b border-white/[0.06] px-4 py-4">
+        <img src="/lumix.svg" alt="Lumix" className="h-7 w-auto" />
       </div>
 
-      <nav className="flex-1 px-3 pt-2">
-        <div className="px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-gray-500">Menu</div>
-        <ul className="space-y-1">
+      <nav className="flex flex-1 flex-col px-2">
+        <div className="mt-6 mb-2 px-3 text-[10px] uppercase tracking-widest text-gray-500">Menu</div>
+        <ul className="space-y-0.5">
           {links.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <Link
                 to={to}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors',
-                  'hover:bg-white/5 hover:text-white',
-                )}
-                activeProps={{ className: 'bg-white/[0.06] text-white' }}
+                className={ITEM}
+                activeProps={{ className: cn(ITEM, 'bg-white/[0.06] text-white') }}
                 activeOptions={{ exact: to === '/' }}
               >
-                <Icon className="size-4 shrink-0" />
-                <span>{label}</span>
+                <Icon size={16} className="shrink-0" />
+                <span className="truncate">{label}</span>
               </Link>
             </li>
           ))}
         </ul>
-      </nav>
 
-      <div className="border-t border-white/10 p-3">
-        <button
-          type="button"
-          onClick={() => void handleSignOut()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <LogOut className="size-4" />
-          Sair
-        </button>
-      </div>
+        <div className="mt-auto border-t border-white/[0.06] py-2">
+          <button type="button" onClick={() => void handleSignOut()} className={ITEM}>
+            <LogOut size={16} className="shrink-0" />
+            Sair
+          </button>
+        </div>
+      </nav>
     </aside>
   )
 }

@@ -1,16 +1,8 @@
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Panel } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ChartPoint } from '@/hooks/useFollowupMetrics'
-import { dayKeyLabel, dayKeyLongLabel } from '@/lib/dates'
+import { dayKeyChartLabel } from '@/lib/dates'
 
 const SERIES = [
   { key: 'enviados', label: 'Enviados', color: '#80d7f8' },
@@ -22,24 +14,55 @@ interface FollowupChartProps {
   loading?: boolean
 }
 
+interface TooltipPayloadItem {
+  dataKey?: string | number
+  value?: number | string
+  color?: string
+}
+
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: unknown }) {
+  if (!active || !payload?.length) return null
+  const items = payload.filter((p) => SERIES.some((s) => s.key === p.dataKey))
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#18181b] px-3 py-2 text-xs shadow-xl">
+      <div className="mb-1.5 text-gray-400">{dayKeyChartLabel(String(label))}</div>
+      {items.map((p) => {
+        const s = SERIES.find((x) => x.key === p.dataKey)
+        return (
+          <div key={String(p.dataKey)} className="flex items-center justify-between gap-6">
+            <span className="flex items-center gap-1.5 text-gray-300">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s?.color }} />
+              {s?.label}
+            </span>
+            <span className="font-medium text-white tabular-nums">{p.value}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function FollowupChart({ data, loading }: FollowupChartProps) {
   const isEmpty = !loading && data.every((d) => d.enviados === 0 && d.recuperados === 0)
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <h3 className="text-sm font-semibold text-white">Follow-ups ao longo do tempo</h3>
+    <Panel>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Follow-ups ao longo do tempo</h3>
+          <p className="text-xs text-gray-500">Follow-ups enviados e leads recuperados por dia</p>
+        </div>
         <div className="flex items-center gap-4">
           {SERIES.map((s) => (
-            <div key={s.key} className="flex items-center gap-2 text-xs text-gray-400">
-              <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} />
+            <div key={s.key} className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
               {s.label}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="relative h-72">
+      <div className="relative h-64">
         {loading ? (
           <Skeleton className="h-full w-full bg-white/5" />
         ) : (
@@ -50,7 +73,7 @@ export function FollowupChart({ data, loading }: FollowupChartProps) {
               </div>
             )}
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <ComposedChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                 <defs>
                   {SERIES.map((s) => (
                     <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -59,36 +82,17 @@ export function FollowupChart({ data, loading }: FollowupChartProps) {
                     </linearGradient>
                   ))}
                 </defs>
-                <CartesianGrid stroke="#262626" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis
                   dataKey="day"
-                  tickFormatter={dayKeyLabel}
-                  tick={{ fill: '#6b7280', fontSize: 11 }}
-                  axisLine={{ stroke: '#262626' }}
-                  tickLine={false}
-                  minTickGap={24}
-                />
-                <YAxis
-                  allowDecimals={false}
+                  tickFormatter={dayKeyChartLabel}
                   tick={{ fill: '#6b7280', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
+                  minTickGap={32}
                 />
-                <Tooltip
-                  cursor={{ stroke: '#404040', strokeDasharray: '3 3' }}
-                  contentStyle={{
-                    backgroundColor: '#141416',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 10,
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: '#9ca3af', marginBottom: 4 }}
-                  labelFormatter={(label) => dayKeyLongLabel(String(label))}
-                  formatter={(value, name) => [
-                    value,
-                    SERIES.find((s) => s.key === name)?.label ?? String(name),
-                  ]}
-                />
+                <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.12)' }} content={<ChartTooltip />} />
                 {SERIES.map((s) => (
                   <Area
                     key={`area-${s.key}`}
@@ -118,6 +122,6 @@ export function FollowupChart({ data, loading }: FollowupChartProps) {
           </>
         )}
       </div>
-    </div>
+    </Panel>
   )
 }

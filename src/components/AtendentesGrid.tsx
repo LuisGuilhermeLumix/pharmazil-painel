@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Panel } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { isConectada, updateFollowupAtivo } from '@/hooks/useInstancias'
@@ -39,41 +40,39 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
   }
 
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
+    <Panel className="p-4">
+      <div className="mb-3 flex items-center justify-between px-1">
         <h3 className="text-sm font-semibold text-white">Atendentes</h3>
         <span className="text-xs text-gray-500">Ative ou pause o follow-up automático por chat</span>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl bg-white/5" />
+            <Skeleton key={i} className="h-24 rounded-xl bg-white/5" />
           ))}
         </div>
       ) : instancias.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center text-sm text-gray-500">
-          Nenhum atendente cadastrado
-        </div>
+        <div className="py-8 text-center text-sm text-gray-500">Nenhum atendente cadastrado</div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-3 gap-4">
           {instancias.map((inst) => {
             const conectada = isConectada(inst)
             const v = viewById.get(inst.id)
             return (
               <div
                 key={inst.id}
-                className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-5"
+                className="flex items-start justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-white">{inst.nome}</div>
-                  <div className="mt-0.5 text-xs text-gray-400">{formatPhone(inst.numero)}</div>
-                  <div className="mt-2 flex items-center gap-2 text-xs">
+                  <div className="truncate text-sm font-semibold text-white">{inst.nome}</div>
+                  <div className="text-xs text-gray-500 tabular-nums">{formatPhone(inst.numero)}</div>
+                  <div className="mt-2 flex items-center gap-1.5 text-xs">
                     <span
-                      className="size-2 rounded-full"
+                      className="h-2 w-2 rounded-full"
                       style={{ backgroundColor: conectada ? '#22c55e' : '#ef4444' }}
                     />
-                    <span className={conectada ? 'text-[#22c55e]' : 'text-[#ef4444]'}>
+                    <span style={{ color: conectada ? '#22c55e' : '#ef4444' }}>
                       {conectada ? 'Conectado' : 'Desconectado'}
                     </span>
                   </div>
@@ -84,9 +83,9 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
                     disabled={pending.has(inst.id)}
                     onCheckedChange={(c) => void toggle(inst, c)}
                     aria-label={`Follow-up de ${inst.nome}`}
-                    className="data-[state=checked]:bg-[#22c55e]"
+                    className="data-[state=checked]:bg-[#80d7f8]!"
                   />
-                  <span className="text-[11px] whitespace-nowrap text-gray-500">
+                  <span className="text-right text-[11px] whitespace-nowrap text-gray-500 tabular-nums">
                     {formatInt(v?.leads_em_andamento)} em andamento · {formatInt(v?.leads_recuperados)} recuperados
                   </span>
                 </div>
@@ -95,6 +94,6 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
           })}
         </div>
       )}
-    </div>
+    </Panel>
   )
 }

@@ -24,7 +24,7 @@ function DisparoPage() {
     <>
       <PageHeader title="Disparo em grupos" subtitle="Envie imagem e texto para os grupos do WhatsApp de cada chat" />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-1">
           <DisparoForm
             instancias={instancias.data ?? []}

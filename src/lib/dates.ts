@@ -124,6 +124,14 @@ export function dayKeyLabel(key: DayKey): string {
   return p ? `${pad(p.d)}/${pad(p.m)}` : key
 }
 
+const MONTHS_SHORT = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.']
+
+/** Label "01 de out." a partir de uma chave de dia (sem parse de Date). */
+export function dayKeyChartLabel(key: DayKey): string {
+  const p = parseDayKey(key)
+  return p ? `${pad(p.d)} de ${MONTHS_SHORT[p.m - 1] ?? p.m}` : key
+}
+
 /** Label "dd/mm/yyyy" a partir de uma chave de dia (sem parse de Date). */
 export function dayKeyLongLabel(key: DayKey): string {
   const p = parseDayKey(key)

@@ -1,26 +1,35 @@
+import type { ReactNode } from 'react'
 import type { EnvioStatus, FollowupStatus } from '@/types/db'
 import { cn } from '@/lib/utils'
 
-type BadgeTone = 'green' | 'blue' | 'red' | 'gray' | 'yellow' | 'purple'
+const COLORS = {
+  green: '#22c55e',
+  blue: '#80d7f8',
+  red: '#ef4444',
+  gray: '#6b7280',
+  yellow: '#f59e0b',
+  purple: '#e65ff5',
+} as const
 
-const TONES: Record<BadgeTone, string> = {
-  green: 'bg-[#22c55e]/15 text-[#22c55e]',
-  blue: 'bg-[#80d7f8]/15 text-[#80d7f8]',
-  red: 'bg-[#ef4444]/15 text-[#ef4444]',
-  gray: 'bg-[#6b7280]/20 text-gray-300',
-  yellow: 'bg-[#f59e0b]/15 text-[#f59e0b]',
-  purple: 'bg-[#e65ff5]/15 text-[#e65ff5]',
-}
+type BadgeTone = keyof typeof COLORS
 
-export function ToneBadge({ tone, children, className, title }: { tone: BadgeTone; children: React.ReactNode; className?: string; title?: string }) {
+export function ToneBadge({
+  tone,
+  children,
+  className,
+  title,
+}: {
+  tone: BadgeTone
+  children: ReactNode
+  className?: string
+  title?: string
+}) {
+  const c = COLORS[tone]
   return (
     <span
       title={title}
-      className={cn(
-        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap',
-        TONES[tone],
-        className,
-      )}
+      className={cn('inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium whitespace-nowrap', className)}
+      style={{ backgroundColor: `${c}26`, color: c }}
     >
       {children}
     </span>
@@ -48,8 +57,9 @@ const ENVIO: Record<EnvioStatus, { label: string; tone: BadgeTone }> = {
 
 export function EnvioStatusBadge({ status, erro }: { status: EnvioStatus | string; erro?: string | null }) {
   const s = ENVIO[status as EnvioStatus] ?? { label: status, tone: 'gray' as BadgeTone }
+  const hasErro = status === 'erro' && !!erro
   return (
-    <ToneBadge tone={s.tone} title={status === 'erro' && erro ? erro : undefined} className={status === 'erro' && erro ? 'cursor-help' : undefined}>
+    <ToneBadge tone={s.tone} title={hasErro ? erro : undefined} className={hasErro ? 'cursor-help' : undefined}>
       {s.label}
     </ToneBadge>
   )

@@ -56,7 +56,7 @@ function NumberField({
           max={max}
           value={Number.isFinite(value) ? value : ''}
           onChange={(e) => onChange(e.target.value === '' ? NaN : Number(e.target.value))}
-          className="border-white/10 bg-white/[0.02] text-white"
+          className="h-9 rounded-lg border-white/10 bg-white/[0.03] text-sm text-white tabular-nums"
         />
         {suffix && (
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-gray-500">
@@ -138,18 +138,17 @@ export function ConfigDialog() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
+      <button
+        type="button"
         onClick={() => setOpen(true)}
         aria-label="Regras do follow-up"
-        className="border-white/10 bg-white/[0.02] text-gray-400 hover:bg-white/5 hover:text-white"
+        className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
       >
-        <Settings className="size-4" />
-      </Button>
+        <Settings size={14} />
+      </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-white/10 bg-[#111113] sm:max-w-md">
+        <DialogContent className="rounded-2xl border-white/10 bg-[#111113] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Regras do follow-up</DialogTitle>
             <DialogDescription>Define quando e quantas vezes o follow-up automático é enviado.</DialogDescription>
@@ -165,7 +164,7 @@ export function ConfigDialog() {
             <p className="text-sm text-[#ef4444]">{error}</p>
           ) : (
             <div className="space-y-5">
-              <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-white">Follow-up ativo</div>
                   <div className="text-xs text-gray-400">Chave geral do envio automático</div>
@@ -173,7 +172,7 @@ export function ConfigDialog() {
                 <Switch
                   checked={form.ativo}
                   onCheckedChange={(c) => set('ativo', c)}
-                  className="data-[state=checked]:bg-[#22c55e]"
+                  className="data-[state=checked]:bg-[#80d7f8]!"
                 />
               </div>
 

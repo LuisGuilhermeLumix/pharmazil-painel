@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,6 +21,10 @@ import { useGrupos } from '@/hooks/useGrupos'
 import { isConectada } from '@/hooks/useInstancias'
 import { formatBytes, formatPhone } from '@/lib/format'
 import type { Instancia } from '@/types/db'
+
+const LABEL = 'text-xs uppercase tracking-wider text-gray-400'
+const FIELD = 'h-9 w-full rounded-lg border-white/10 bg-white/[0.03] text-sm text-white'
+export const DIALOG = 'rounded-2xl border-white/10 bg-[#111113]'
 
 interface DisparoFormProps {
   instancias: Instancia[]
@@ -41,13 +46,9 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
 
   const instancia = conectadas.find((i) => i.instancia === instanciaKey) ?? null
   const grupos = useGrupos(instancia?.instancia ?? null)
-  const gruposVisiveis = useMemo(
-    () => (grupos.data ?? []).filter((g) => g.ativo && !g.oculto),
-    [grupos.data],
-  )
+  const gruposVisiveis = useMemo(() => (grupos.data ?? []).filter((g) => g.ativo && !g.oculto), [grupos.data])
   const grupo = gruposVisiveis.find((g) => g.jid === grupoJid) ?? null
 
-  // limpa o grupo ao trocar de chat ou se ele deixar de estar visível
   useEffect(() => {
     if (grupoJid && !gruposVisiveis.some((g) => g.jid === grupoJid)) setGrupoJid('')
   }, [gruposVisiveis, grupoJid])
@@ -129,27 +130,27 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
+    <Panel>
       <h3 className="text-sm font-semibold text-white">Novo disparo</h3>
-      <p className="mt-1 text-xs text-gray-400">Envia uma imagem e/ou texto para um grupo do WhatsApp.</p>
+      <p className="text-xs text-gray-500">Envia uma imagem e/ou texto para um grupo do WhatsApp.</p>
 
-      <div className="mt-5 space-y-5">
+      <div className="mt-5 space-y-4">
         {/* Chat */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-400">Chat (atendente)</Label>
+          <Label className={LABEL}>Chat (atendente)</Label>
           {loadingInstancias ? (
-            <Skeleton className="h-9 w-full bg-white/5" />
+            <Skeleton className="h-9 w-full rounded-lg bg-white/5" />
           ) : (
             <Select value={instanciaKey} onValueChange={setInstanciaKey}>
-              <SelectTrigger className="w-full border-white/10 bg-white/[0.02] text-white">
+              <SelectTrigger className={FIELD}>
                 <SelectValue placeholder={conectadas.length ? 'Selecione o chat' : 'Nenhum chat conectado'} />
               </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#111113]">
+              <SelectContent className="rounded-xl border-white/10 bg-[#111113]">
                 {conectadas.map((i) => (
                   <SelectItem key={i.id} value={i.instancia}>
                     <span className="flex items-center gap-2">
                       <span>{i.nome}</span>
-                      <span className="text-xs text-gray-500">{formatPhone(i.numero)}</span>
+                      <span className="text-xs text-gray-500 tabular-nums">{formatPhone(i.numero)}</span>
                     </span>
                   </SelectItem>
                 ))}
@@ -160,9 +161,9 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
 
         {/* Grupo */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-400">Grupo</Label>
+          <Label className={LABEL}>Grupo</Label>
           <Select value={grupoJid} onValueChange={setGrupoJid} disabled={!instancia || grupos.loading}>
-            <SelectTrigger className="w-full border-white/10 bg-white/[0.02] text-white">
+            <SelectTrigger className={FIELD}>
               <SelectValue
                 placeholder={
                   !instancia
@@ -175,7 +176,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
                 }
               />
             </SelectTrigger>
-            <SelectContent className="border-white/10 bg-[#111113]">
+            <SelectContent className="rounded-xl border-white/10 bg-[#111113]">
               {gruposVisiveis.map((g) => (
                 <SelectItem key={g.id} value={g.jid}>
                   {g.nome ?? g.jid}
@@ -196,8 +197,8 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
 
         {/* Imagem */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-400">
-            Imagem <span className="text-gray-600">(opcional)</span>
+          <Label className={LABEL}>
+            Imagem <span className="normal-case tracking-normal text-gray-600">(opcional)</span>
           </Label>
           <input
             ref={fileInput}
@@ -207,15 +208,15 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
           />
           {preview ? (
-            <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
+            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40">
               <img src={preview} alt="Pré-visualização" className="max-h-56 w-full object-contain" />
               <button
                 type="button"
                 onClick={clearFile}
-                className="absolute top-2 right-2 rounded-md bg-black/70 p-1 text-gray-300 hover:text-white"
+                className="absolute top-2 right-2 rounded-lg bg-black/70 p-1 text-gray-300 hover:text-white"
                 aria-label="Remover imagem"
               >
-                <X className="size-4" />
+                <X size={16} />
               </button>
               <div className="truncate border-t border-white/10 px-3 py-1.5 text-[11px] text-gray-400">
                 {file?.name} · {file ? formatBytes(file.size) : ''}
@@ -225,9 +226,9 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             <button
               type="button"
               onClick={() => fileInput.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-xs text-gray-400 transition-colors hover:border-white/30 hover:text-white"
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-xs text-gray-400 transition-colors hover:border-white/30 hover:text-white"
             >
-              <ImagePlus className="size-5" />
+              <ImagePlus size={20} />
               <span>Clique para escolher (JPG, PNG ou WEBP · até 10 MB)</span>
             </button>
           )}
@@ -235,8 +236,9 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
 
         {/* Texto */}
         <div className="space-y-1.5">
-          <Label htmlFor="texto" className="text-xs text-gray-400">
-            Texto <span className="text-gray-600">(opcional{file ? ' · vai como legenda' : ''})</span>
+          <Label htmlFor="texto" className={LABEL}>
+            Texto{' '}
+            <span className="normal-case tracking-normal text-gray-600">(opcional{file ? ' · vai como legenda' : ''})</span>
           </Label>
           <Textarea
             id="texto"
@@ -244,7 +246,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             onChange={(e) => setTexto(e.target.value)}
             rows={5}
             placeholder="Escreva a mensagem…"
-            className="resize-y border-white/10 bg-white/[0.02] text-white placeholder:text-gray-600"
+            className="resize-y rounded-lg border-white/10 bg-white/[0.03] text-sm text-white placeholder:text-gray-600"
           />
         </div>
 
@@ -253,9 +255,9 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           onClick={() => setConfirmOpen(true)}
           disabled={!!validationError || sending}
           title={validationError ?? undefined}
-          className="w-full bg-[#f97316] text-white hover:bg-[#ea6a0c] disabled:opacity-50"
+          className="h-9 w-full rounded-lg bg-[#f97316] text-white hover:bg-[#ea580c] disabled:opacity-50"
         >
-          <Send className="size-4" />
+          <Send size={16} />
           Enviar
         </Button>
         {validationError && <p className="text-center text-[11px] text-gray-500">{validationError}</p>}
@@ -263,7 +265,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
 
       {/* Confirmação */}
       <Dialog open={confirmOpen} onOpenChange={(o) => !sending && setConfirmOpen(o)}>
-        <DialogContent className="border-white/10 bg-[#111113] sm:max-w-md">
+        <DialogContent className={`${DIALOG} sm:max-w-md`}>
           <DialogHeader>
             <DialogTitle>Confirmar disparo</DialogTitle>
             <DialogDescription>
@@ -272,24 +274,18 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="overflow-hidden rounded-lg border border-white/10 bg-black/40">
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
             {preview && <img src={preview} alt="Pré-visualização" className="max-h-64 w-full object-contain" />}
             {textoLimpo && (
-              <p className="max-h-40 overflow-y-auto px-4 py-3 text-sm whitespace-pre-wrap text-gray-200">
-                {textoLimpo}
-              </p>
+              <p className="max-h-40 overflow-y-auto px-4 py-3 text-sm whitespace-pre-wrap text-gray-200">{textoLimpo}</p>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="rounded-b-2xl">
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={sending} className="text-gray-400 hover:text-white">
               Cancelar
             </Button>
-            <Button
-              onClick={() => void handleConfirm()}
-              disabled={sending}
-              className="bg-[#f97316] text-white hover:bg-[#ea6a0c]"
-            >
+            <Button onClick={() => void handleConfirm()} disabled={sending} className="rounded-lg bg-[#f97316] text-white hover:bg-[#ea580c]">
               {sending ? 'Enviando…' : 'Confirmar envio'}
             </Button>
           </DialogFooter>
@@ -308,6 +304,6 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           }
         />
       )}
-    </div>
+    </Panel>
   )
 }

@@ -24,10 +24,10 @@ function AppLayout() {
   }, [navigate])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       <Sidebar />
-      <main className="ml-60 min-h-screen">
-        <div className="mx-auto max-w-[1400px] px-8 py-8">
+      <main className="ml-44 min-h-screen">
+        <div className="mx-auto max-w-[1400px] px-6 py-6">
           <Outlet />
         </div>
       </main>

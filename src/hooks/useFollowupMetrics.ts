@@ -9,7 +9,7 @@ import {
   type DayKey,
   type Period,
 } from '@/lib/dates'
-import { pctOf } from '@/lib/format'
+import { getAccentColor, getEtapaColor, pctOf } from '@/lib/format'
 import type { Conversa, Followup, FollowupMetricasView, FollowupStatus, Instancia } from '@/types/db'
 import { useAsync } from './useAsync'
 
@@ -62,9 +62,6 @@ interface RawData {
   instancias: Instancia[]
   view: FollowupMetricasView[]
 }
-
-const ETAPA_COLORS = ['#80d7f8', '#e65ff5', '#f59e0b', '#f97316', '#22c55e']
-const ATENDENTE_COLORS = ['#80d7f8', '#e65ff5', '#22c55e', '#f59e0b', '#f97316', '#ef4444', '#6b7280']
 
 async function fetchRaw(period: Period): Promise<RawData> {
   const range = resolvePeriod(period)
@@ -183,26 +180,26 @@ function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
   const taxa = pctOf(recuperados, leadsEmFollowup)
 
   const etapas = Array.from(new Set([1, 2, 3, ...porEtapaMap.keys()])).sort((a, b) => a - b)
-  const porEtapa: BreakdownItem[] = etapas.map((e, i) => ({
+  const porEtapa: BreakdownItem[] = etapas.map((e) => ({
     label: `Etapa ${e}`,
     value: porEtapaMap.get(e) ?? 0,
-    color: ETAPA_COLORS[i % ETAPA_COLORS.length],
+    color: getEtapaColor(e),
   }))
-  const recuperadosPorEtapa: BreakdownItem[] = etapas.map((e, i) => ({
+  const recuperadosPorEtapa: BreakdownItem[] = etapas.map((e) => ({
     label: `Etapa ${e}`,
     value: recuperadosPorEtapaMap.get(e) ?? 0,
-    color: ETAPA_COLORS[i % ETAPA_COLORS.length],
+    color: getEtapaColor(e),
   }))
 
   const atendentes = Array.from(
     new Set([...instancias.map((i) => i.nome), ...enviadosPorAtendenteMap.keys()]),
   )
-  const enviadosPorAtendente: BreakdownItem[] = atendentes.map((a, i) => ({
+  const enviadosPorAtendente: BreakdownItem[] = atendentes.map((a) => ({
     label: a,
     value: enviadosPorAtendenteMap.get(a) ?? 0,
-    color: ATENDENTE_COLORS[i % ATENDENTE_COLORS.length],
+    color: getAccentColor(a),
   }))
-  const taxaPorAtendente: BreakdownItem[] = atendentes.map((a, i) => {
+  const taxaPorAtendente: BreakdownItem[] = atendentes.map((a) => {
     const l = leadsPorAtendente.get(a)?.size ?? 0
     const r = recuperadosPorAtendente.get(a)?.size ?? 0
     const t = pctOf(r, l)
@@ -210,7 +207,7 @@ function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
       label: a,
       value: t,
       display: `${t.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`,
-      color: ATENDENTE_COLORS[i % ATENDENTE_COLORS.length],
+      color: getAccentColor(a),
     }
   })
 
