@@ -22,7 +22,16 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-44 flex-col border-r border-white/[0.06] bg-[#0a0a0a]">
       <div className="flex items-center border-b border-white/[0.06] px-4 py-4">
-        <img src="/lumix.svg" alt="Lumix" className="h-7 w-auto" />
+        <img
+          src="/lumix-logo.svg"
+          alt="Lumix"
+          className="h-7 w-auto"
+          onError={(e) => {
+            // fallback enquanto public/lumix-logo.svg não estiver na pasta
+            e.currentTarget.onerror = null
+            e.currentTarget.src = '/lumix.svg'
+          }}
+        />
       </div>
 
       <nav className="flex flex-1 flex-col px-2">

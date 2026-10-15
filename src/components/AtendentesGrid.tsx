@@ -62,7 +62,7 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
             return (
               <div
                 key={inst.id}
-                className="flex items-start justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+                className="flex items-start justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{inst.nome}</div>

@@ -41,7 +41,16 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
       <Panel className="w-[380px] p-8">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <img src="/lumix.svg" alt="Lumix" className="h-9 w-auto" />
+          <img
+            src="/lumix-logo.svg"
+            alt="Lumix"
+            className="h-9 w-auto"
+            onError={(e) => {
+              // fallback enquanto public/lumix-logo.svg não estiver na pasta
+              e.currentTarget.onerror = null
+              e.currentTarget.src = '/lumix.svg'
+            }}
+          />
           <p className="text-xs text-gray-500">Entre com sua conta para acessar o painel</p>
         </div>
 
