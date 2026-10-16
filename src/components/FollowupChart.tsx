@@ -2,6 +2,7 @@ import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip,
 import { Panel } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ChartPoint } from '@/hooks/useFollowupMetrics'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { dayKeyChartLabel } from '@/lib/dates'
 
 const SERIES = [
@@ -43,11 +44,12 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 export function FollowupChart({ data, loading }: FollowupChartProps) {
+  const isMobile = useIsMobile()
   const isEmpty = !loading && data.every((d) => d.enviados === 0 && d.recuperados === 0)
 
   return (
-    <Panel>
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <Panel className="min-w-0">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Follow-ups ao longo do tempo</h3>
           <p className="text-xs text-gray-500">Follow-ups enviados e leads recuperados por dia</p>
@@ -62,7 +64,7 @@ export function FollowupChart({ data, loading }: FollowupChartProps) {
         </div>
       </div>
 
-      <div className="relative h-64">
+      <div className="relative h-52 w-full min-w-0 lg:h-64">
         {loading ? (
           <Skeleton className="h-full w-full bg-white/5" />
         ) : (
@@ -89,7 +91,8 @@ export function FollowupChart({ data, loading }: FollowupChartProps) {
                   tick={{ fill: '#6b7280', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  minTickGap={32}
+                  interval="preserveStartEnd"
+                  minTickGap={isMobile ? 24 : 32}
                 />
                 <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.12)' }} content={<ChartTooltip />} />

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { EnvioCard } from '@/components/EnvioCard'
 import { Panel } from '@/components/Panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ENVIO_STATUS_COLOR, EnvioStatusBadge } from '@/components/StatusBadge'
 import { fetchCalendario } from '@/hooks/useEnvios'
 import { useAsync } from '@/hooks/useAsync'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import {
   WEEKDAYS_SHORT,
   calendarGrid,
@@ -35,9 +37,10 @@ interface CalendarioDisparosProps {
 }
 
 const NAV_BTN =
-  'inline-flex h-7 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-2 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.06]'
+  'inline-flex h-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.06] lg:h-7 lg:px-2'
 
 export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refreshKey }: CalendarioDisparosProps) {
+  const isMobile = useIsMobile()
   const [ym, setYm] = useState(currentYearMonth)
   const { data, loading, error } = useAsync<Envio[]>(() => fetchCalendario(ym), [ym.y, ym.m, refreshKey])
   const nomePorInstancia = useMemo(() => new Map(instancias.map((i) => [i.instancia, i.nome])), [instancias])
@@ -55,19 +58,20 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
 
   const weeks = useMemo(() => calendarGrid(ym), [ym])
   const hojeKey = dayKey(todaySP())
+  const selecionadosDoDia = selectedDay ? (porDia.get(selectedDay) ?? []) : []
 
   return (
-    <Panel>
-      <div className="mb-4 flex items-center justify-between gap-4">
+    <Panel className="min-w-0">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Calendário de disparos</h3>
-          <p className="text-xs text-gray-500">Clique em um dia para filtrar os agendados</p>
+          <p className="text-xs text-gray-500">{isMobile ? 'Toque em um dia para ver os disparos' : 'Clique em um dia para filtrar os agendados'}</p>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setYm((v) => shiftMonth(v, -1))} className={NAV_BTN} aria-label="Mês anterior">
             <ChevronLeft size={14} />
           </button>
-          <span className="min-w-[140px] text-center text-sm font-medium text-white">{monthLabel(ym)}</span>
+          <span className="min-w-0 flex-1 text-center text-sm font-medium text-white lg:min-w-[140px] lg:flex-none">{monthLabel(ym)}</span>
           <button type="button" onClick={() => setYm((v) => shiftMonth(v, 1))} className={NAV_BTN} aria-label="Próximo mês">
             <ChevronRight size={14} />
           </button>
@@ -79,14 +83,14 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
 
       {error && <p className="mb-3 text-xs text-[#ef4444]">{error}</p>}
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid w-full min-w-0 grid-cols-7 gap-1">
         {WEEKDAYS_SHORT.map((d) => (
           <div key={d} className="pb-1 text-center text-[10px] font-medium uppercase tracking-wider text-gray-500">
             {d}
           </div>
         ))}
         {loading && !data
-          ? Array.from({ length: 42 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg bg-white/5" />)
+          ? Array.from({ length: 42 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg bg-white/5 lg:aspect-auto lg:h-16" />)
           : weeks.flat().map((cell) => {
               const envios = porDia.get(cell.key) ?? []
               const isToday = cell.key === hojeKey
@@ -96,7 +100,7 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
                   type="button"
                   onClick={() => onSelectDay(isSelected ? null : cell.key)}
                   className={cn(
-                    'flex h-16 w-full flex-col items-start rounded-lg border p-1.5 text-left transition-colors',
+                    'flex aspect-square w-full min-w-0 flex-col items-start rounded-lg border p-1 text-left transition-colors lg:aspect-auto lg:h-16 lg:p-1.5',
                     'border-transparent hover:bg-white/[0.04]',
                     isToday && 'border-[#80d7f8]/40',
                     isSelected && 'bg-white/[0.06]',
@@ -106,16 +110,19 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
                     {cell.day}
                   </span>
                   {envios.length > 0 && (
-                    <span className="mt-auto flex items-center gap-1">
+                    <span className="mt-auto flex items-center gap-0.5 lg:gap-1">
                       {envios.slice(0, MAX_DOTS).map((e) => (
                         <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ENVIO_STATUS_COLOR[e.status] ?? '#6b7280' }} />
                       ))}
-                      {envios.length > MAX_DOTS && <span className="text-[10px] text-gray-400 tabular-nums">+{envios.length - MAX_DOTS}</span>}
+                      {envios.length > MAX_DOTS && (
+                        <span className="text-[9px] text-gray-400 tabular-nums lg:text-[10px]">+{envios.length - MAX_DOTS}</span>
+                      )}
                     </span>
                   )}
                 </button>
               )
-              if (envios.length === 0) return <div key={cell.key}>{cellEl}</div>
+              // mobile: sem tooltip de hover; o toque seleciona e a lista aparece abaixo
+              if (isMobile || envios.length === 0) return <div key={cell.key}>{cellEl}</div>
               return (
                 <Tooltip key={cell.key}>
                   <TooltipTrigger asChild>{cellEl}</TooltipTrigger>
@@ -157,7 +164,7 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
             })}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500">
         {(['agendado', 'enviado', 'erro', 'cancelado'] as const).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ENVIO_STATUS_COLOR[s] }} />
@@ -165,6 +172,22 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
           </span>
         ))}
       </div>
+
+      {/* mobile: lista do dia selecionado abaixo do calendário */}
+      {isMobile && selectedDay && (
+        <div className="mt-4 border-t border-white/[0.08] pt-4">
+          <h4 className="mb-2 text-sm font-semibold text-white">Disparos em {dayKeyChartLabel(selectedDay)}</h4>
+          {selecionadosDoDia.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-500">Nenhum disparo neste dia</p>
+          ) : (
+            <ul className="space-y-2">
+              {selecionadosDoDia.map((e) => (
+                <EnvioCard key={e.id} envio={e} chatNome={nomePorInstancia.get(e.instancia) ?? e.instancia} modo="agendado" />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Panel>
   )
 }

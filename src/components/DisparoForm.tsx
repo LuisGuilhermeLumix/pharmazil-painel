@@ -34,9 +34,9 @@ import { cn } from '@/lib/utils'
 import type { Grupo, Instancia } from '@/types/db'
 
 const LABEL = 'text-xs uppercase tracking-wider text-gray-400'
-const FIELD = 'h-9 w-full rounded-lg border-white/10 bg-white/[0.03] text-sm text-white'
+const FIELD = 'h-10 w-full rounded-lg border-white/10 bg-white/[0.03] text-white lg:h-9 lg:text-sm'
 const DATE_FIELD =
-  'h-9 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-sm text-white tabular-nums [color-scheme:dark]'
+  'h-10 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-white tabular-nums [color-scheme:dark] lg:h-9 lg:text-sm'
 export const DIALOG = 'rounded-2xl border-white/10 bg-[#111113]'
 export const GRADIENT_BTN =
   'bg-gradient-to-r from-[#80d7f8] to-[#e65ff5] font-semibold text-[#0a0a0a] hover:opacity-90 disabled:opacity-40'
@@ -339,7 +339,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           />
           {preview ? (
             <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40">
-              <img src={preview} alt="Pré-visualização" className="max-h-56 w-full object-contain" />
+              <img src={preview} alt="Pré-visualização" className="max-h-48 w-full object-contain lg:max-h-56" />
               <button
                 type="button"
                 onClick={clearFile}
@@ -356,7 +356,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             <button
               type="button"
               onClick={() => fileInput.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-xs text-gray-400 transition-colors hover:border-white/30 hover:text-white"
+              className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 text-xs text-gray-400 transition-colors hover:border-white/30 hover:text-white"
             >
               <ImagePlus size={20} />
               <span>Clique para escolher (JPG, PNG ou WEBP · até 10 MB)</span>
@@ -395,14 +395,14 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           </div>
           {agendar && (
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="date"
                   value={agData}
                   min={hojeKey}
                   onChange={(e) => setAgData(e.target.value)}
                   aria-label="Data do agendamento"
-                  className={cn(DATE_FIELD, 'min-w-0 flex-1')}
+                  className={cn(DATE_FIELD, 'w-full min-w-0 sm:flex-1')}
                 />
                 <input
                   type="time"
@@ -410,7 +410,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
                   step={300}
                   onChange={(e) => setAgHora(e.target.value)}
                   aria-label="Hora do agendamento"
-                  className={cn(DATE_FIELD, 'w-28')}
+                  className={cn(DATE_FIELD, 'w-full sm:w-28')}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -431,7 +431,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           onClick={() => void openConfirm()}
           disabled={!!validationError || sending}
           title={validationError ?? undefined}
-          className={cn('h-9 w-full rounded-lg', GRADIENT_BTN)}
+          className={cn('h-12 w-full rounded-lg text-sm lg:h-9', GRADIENT_BTN)}
         >
           <Send size={16} />
           {agendar ? 'Agendar envio' : 'Enviar agora'}

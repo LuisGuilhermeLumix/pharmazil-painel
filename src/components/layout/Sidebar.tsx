@@ -20,7 +20,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-52 flex-col border-r border-white/[0.06] bg-[#0a0a0a]">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col lg:flex border-r border-white/[0.06] bg-[#0a0a0a]">
       <div className="flex items-center border-b border-white/[0.06] px-4 py-4">
         <img src="/lumix-logo.png" alt="Lumix" className="h-9 w-auto" />
       </div>

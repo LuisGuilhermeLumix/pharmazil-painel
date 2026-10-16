@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { MobileHeader, MobileTabBar } from '@/components/layout/MobileNav'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { getSession } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
@@ -26,8 +27,10 @@ function AppLayout() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <Sidebar />
-      <main className="ml-52 min-h-screen">
-        <div className="mx-auto max-w-[1400px] px-6 py-6">
+      <MobileHeader />
+      <MobileTabBar />
+      <main className="min-h-screen pt-14 pb-20 lg:ml-52 lg:pt-0 lg:pb-0">
+        <div className="mx-auto w-full min-w-0 max-w-[1400px] px-4 py-4 lg:px-8 lg:py-6">
           <Outlet />
         </div>
       </main>

@@ -103,3 +103,19 @@
     @apply font-sans;
     }
 }
+/* Utilitários do painel */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* No celular, inputs com 16px para o iOS não dar zoom ao focar */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

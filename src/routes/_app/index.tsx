@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Percent, Send, TrendingUp, Users } from 'lucide-react'
 import { AtendentesGrid } from '@/components/AtendentesGrid'
@@ -6,6 +6,7 @@ import { ConfigDialog } from '@/components/ConfigDialog'
 import { FollowupChart } from '@/components/FollowupChart'
 import { FollowupTable } from '@/components/FollowupTable'
 import { MetricCard } from '@/components/MetricCard'
+import { FOLLOWUP_CONFIG_SAVED } from '@/components/layout/MobileNav'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { PeriodFilter } from '@/components/layout/PeriodFilter'
 import { useFollowupMetrics } from '@/hooks/useFollowupMetrics'
@@ -23,15 +24,29 @@ function FollowupPage() {
   const { metrics, loading, error } = useFollowupMetrics(period, refreshKey)
   const instancias = useInstancias()
 
+  // no mobile a engrenagem fica no header fixo; ele avisa por evento quando salva
+  useEffect(() => {
+    const onSaved = () => setRefreshKey((k) => k + 1)
+    window.addEventListener(FOLLOWUP_CONFIG_SAVED, onSaved)
+    return () => window.removeEventListener(FOLLOWUP_CONFIG_SAVED, onSaved)
+  }, [])
+
   const m = metrics
   const customIncomplete = period.preset === 'custom' && (!period.from || !period.to)
 
   return (
     <>
       <PageHeader title="Follow-up">
-        <PeriodFilter value={period} onChange={setPeriod} />
-        <ConfigDialog onSaved={() => setRefreshKey((k) => k + 1)} />
+        {/* desktop: filtro + engrenagem à direita do título (como antes) */}
+        <div className="hidden lg:flex lg:items-center lg:gap-2">
+          <PeriodFilter value={period} onChange={setPeriod} />
+          <ConfigDialog onSaved={() => setRefreshKey((k) => k + 1)} />
+        </div>
       </PageHeader>
+      {/* mobile: fileira de pílulas com scroll próprio abaixo do título; engrenagem fica no header fixo */}
+      <div className="mb-4 min-w-0 lg:hidden">
+        <PeriodFilter value={period} onChange={setPeriod} />
+      </div>
 
       {error && (
         <div className="mb-4 rounded-2xl border border-[#ef4444]/30 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ef4444]">
@@ -46,7 +61,7 @@ function FollowupPage() {
       )}
 
       {/* Linha 1 — métricas gerais */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Leads em follow-up"
           icon={Users}

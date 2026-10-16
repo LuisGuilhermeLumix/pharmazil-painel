@@ -32,9 +32,9 @@ function DisparoPage() {
     <>
       <PageHeader title="Disparo em grupos" subtitle="Envie imagem e texto para os grupos do WhatsApp de cada chat" />
 
-      <div className="flex items-start gap-4">
-        {/* formulário fixo à esquerda */}
-        <div className="w-[400px] shrink-0">
+      <div className="flex min-w-0 flex-col items-stretch gap-4 lg:flex-row lg:items-start">
+        {/* formulário: largura total no celular, fixo à esquerda no desktop */}
+        <div className="w-full min-w-0 shrink-0 lg:w-[400px]">
           <DisparoForm instancias={lista} loadingInstancias={instancias.loading} onSent={handleChanged} />
         </div>
 

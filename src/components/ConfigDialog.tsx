@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { saveFollowupConfig, useFollowupConfig, type FollowupConfigInput } from '@/hooks/useFollowupConfig'
 import { getEtapaColor } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 const MAX_ETAPAS = 5
 const NOVA_ETAPA_HORAS = 48
@@ -31,12 +32,14 @@ const EMPTY: FollowupConfigInput = {
 interface ConfigDialogProps {
   /** chamado após salvar com sucesso (para recarregar métricas) */
   onSaved?: () => void
+  /** classes extras do botão de engrenagem (ex.: alvo de toque maior no mobile) */
+  buttonClassName?: string
 }
 
 function HoraSelect({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return (
     <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
-      <SelectTrigger aria-label={label} className="h-9 w-[88px] rounded-lg border-white/10 bg-white/[0.03] text-sm text-white tabular-nums">
+      <SelectTrigger aria-label={label} className="h-10 w-full rounded-lg border-white/10 bg-white/[0.03] text-white tabular-nums lg:h-9 lg:w-[88px] lg:text-sm">
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="max-h-64 rounded-xl border-white/10 bg-[#111113]">
@@ -50,7 +53,7 @@ function HoraSelect({ value, onChange, label }: { value: number; onChange: (v: n
   )
 }
 
-export function ConfigDialog({ onSaved }: ConfigDialogProps) {
+export function ConfigDialog({ onSaved, buttonClassName }: ConfigDialogProps) {
   const [open, setOpen] = useState(false)
   const { data, loading, error, reload } = useFollowupConfig()
   const [form, setForm] = useState<FollowupConfigInput>(EMPTY)
@@ -128,7 +131,10 @@ export function ConfigDialog({ onSaved }: ConfigDialogProps) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Regras do follow-up"
-        className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+        className={cn(
+          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white lg:h-[30px] lg:w-[30px]',
+          buttonClassName,
+        )}
       >
         <Settings size={14} />
       </button>
@@ -168,40 +174,47 @@ export function ConfigDialog({ onSaved }: ConfigDialogProps) {
                 <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-gray-400">Etapas</div>
                 <ul className="space-y-2">
                   {etapas.map((h, i) => (
-                    <li key={i} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                      <span className="flex w-16 shrink-0 items-center gap-2 text-sm font-medium text-white">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getEtapaColor(i + 1) }} />
-                        Etapa {i + 1}
-                      </span>
-                      <span className="min-w-0 flex-1 text-xs text-gray-400">
-                        após{' '}
-                        <span className="font-semibold text-gray-200 tabular-nums">
-                          {Number.isFinite(h) ? h : '—'} h
-                        </span>{' '}
-                        {i === 0 ? 'sem resposta do lead' : 'da etapa anterior'}
-                      </span>
-                      <div className="relative shrink-0">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={720}
-                          step={1}
-                          value={Number.isFinite(h) ? h : ''}
-                          onChange={(e) => setEtapa(i, e.target.value === '' ? NaN : Number(e.target.value))}
-                          aria-label={`Horas da etapa ${i + 1}`}
-                          className="h-8 w-20 rounded-lg border-white/10 bg-white/[0.03] pr-6 text-sm text-white tabular-nums"
-                        />
-                        <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-gray-500">h</span>
+                    <li
+                      key={i}
+                      className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
+                    >
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+                        <span className="flex w-16 shrink-0 items-center gap-2 text-sm font-medium text-white">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getEtapaColor(i + 1) }} />
+                          Etapa {i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 text-xs text-gray-400">
+                          após{' '}
+                          <span className="font-semibold text-gray-200 tabular-nums">
+                            {Number.isFinite(h) ? h : '—'} h
+                          </span>{' '}
+                          {i === 0 ? 'sem resposta do lead' : 'da etapa anterior'}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeEtapa(i)}
-                        disabled={etapas.length <= 1}
-                        aria-label={`Remover etapa ${i + 1}`}
-                        className="shrink-0 rounded-md p-1 text-gray-500 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-gray-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center justify-between gap-2 sm:justify-end">
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={720}
+                            step={1}
+                            value={Number.isFinite(h) ? h : ''}
+                            onChange={(e) => setEtapa(i, e.target.value === '' ? NaN : Number(e.target.value))}
+                            aria-label={`Horas da etapa ${i + 1}`}
+                            className="h-10 w-24 rounded-lg border-white/10 bg-white/[0.03] pr-6 text-white tabular-nums lg:h-8 lg:w-20 lg:text-sm"
+                          />
+                          <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-gray-500">h</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEtapa(i)}
+                          disabled={etapas.length <= 1}
+                          aria-label={`Remover etapa ${i + 1}`}
+                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-gray-500 lg:h-7 lg:w-7"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -219,12 +232,16 @@ export function ConfigDialog({ onSaved }: ConfigDialogProps) {
               {/* Janela */}
               <div>
                 <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-gray-400">Janela de envio</div>
-                <div className="flex items-center gap-2 text-sm text-gray-300">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-300">
                   <span>das</span>
-                  <HoraSelect label="Início da janela" value={form.janela_inicio} onChange={(v) => setForm((f) => ({ ...f, janela_inicio: v }))} />
+                  <div className="min-w-0 flex-1">
+                    <HoraSelect label="Início da janela" value={form.janela_inicio} onChange={(v) => setForm((f) => ({ ...f, janela_inicio: v }))} />
+                  </div>
                   <span>às</span>
-                  <HoraSelect label="Fim da janela" value={form.janela_fim} onChange={(v) => setForm((f) => ({ ...f, janela_fim: v }))} />
-                  <span className="text-xs text-gray-500">Horário de Brasília</span>
+                  <div className="min-w-0 flex-1">
+                    <HoraSelect label="Fim da janela" value={form.janela_fim} onChange={(v) => setForm((f) => ({ ...f, janela_fim: v }))} />
+                  </div>
+                  <span className="w-full text-xs text-gray-500 lg:w-auto">Horário de Brasília</span>
                 </div>
                 {!janelaValida && <p className="mt-1.5 text-xs text-[#ef4444]">O início da janela precisa ser antes do fim.</p>}
               </div>

@@ -15,7 +15,7 @@ export const Route = createFileRoute('/login')({
 })
 
 const LABEL = 'text-xs uppercase tracking-wider text-gray-400'
-const FIELD = 'h-9 rounded-lg border-white/10 bg-white/[0.03] text-sm text-white placeholder:text-gray-600'
+const FIELD = 'h-11 rounded-lg border-white/10 bg-white/[0.03] text-base text-white placeholder:text-gray-600 lg:h-9 lg:text-sm'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -38,10 +38,10 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] p-4">
-      <Panel className="w-[380px] p-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4 py-6">
+      <Panel className="mx-4 w-full max-w-[380px] p-6 lg:p-8">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <img src="/lumix-logo.png" alt="Lumix" className="h-12 w-auto" />
+          <img src="/lumix-logo.png" alt="Lumix" className="h-10 w-auto lg:h-12" />
           <p className="text-xs text-gray-500">Entre com sua conta para acessar o painel</p>
         </div>
 
@@ -84,7 +84,7 @@ function LoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="h-9 w-full rounded-lg bg-gradient-to-r from-[#80d7f8] to-[#e65ff5] font-semibold text-[#0a0a0a] hover:opacity-90 disabled:opacity-40"
+            className="h-12 w-full rounded-lg bg-gradient-to-r from-[#80d7f8] to-[#e65ff5] text-sm font-semibold text-[#0a0a0a] hover:opacity-90 disabled:opacity-40 lg:h-9"
           >
             {loading ? 'Entrando…' : 'Entrar'}
           </Button>

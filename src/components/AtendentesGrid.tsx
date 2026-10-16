@@ -47,7 +47,7 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-xl bg-white/5" />
           ))}
@@ -55,14 +55,14 @@ export function AtendentesGrid({ instancias, view, loading, onChange }: Atendent
       ) : instancias.length === 0 ? (
         <div className="py-8 text-center text-sm text-gray-500">Nenhum atendente cadastrado</div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {instancias.map((inst) => {
             const conectada = isConectada(inst)
             const v = viewById.get(inst.id)
             return (
               <div
                 key={inst.id}
-                className="flex items-start justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4"
+                className="flex min-w-0 items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 lg:items-start"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-white">{inst.nome}</div>
