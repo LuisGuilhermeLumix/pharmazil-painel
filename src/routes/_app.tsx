@@ -26,7 +26,7 @@ function AppLayout() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <Sidebar />
-      <main className="ml-44 min-h-screen">
+      <main className="ml-52 min-h-screen">
         <div className="mx-auto max-w-[1400px] px-6 py-6">
           <Outlet />
         </div>

@@ -189,6 +189,18 @@ export function formatAgendado(iso: string | null | undefined): string {
   return `${dayKeyChartLabel(isoToDayKey(iso))} às ${formatTime(iso)}`
 }
 
+/** "15/10 16:48" em SP. */
+export function formatShortDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return `${formatShortDate(iso)} ${formatTime(iso)}`
+}
+
+/** "Hoje 00:25" ou "16/10 00:25" em SP. */
+export function formatAgendadoShort(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return `${isTodaySP(iso) ? 'Hoje' : formatShortDate(iso)} ${formatTime(iso)}`
+}
+
 export function isTodaySP(iso: string): boolean {
   return isoToDayKey(iso) === dayKey(todaySP())
 }

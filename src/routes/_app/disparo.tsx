@@ -26,39 +26,31 @@ function DisparoPage() {
   }
 
   const lista = instancias.data ?? []
+  const carregando = envios.loading && !envios.data
 
   return (
     <>
       <PageHeader title="Disparo em grupos" subtitle="Envie imagem e texto para os grupos do WhatsApp de cada chat" />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-1">
+      <div className="flex items-start gap-4">
+        {/* formulário fixo à esquerda */}
+        <div className="w-[400px] shrink-0">
           <DisparoForm instancias={lista} loadingInstancias={instancias.loading} onSent={handleChanged} />
         </div>
-        <div className="space-y-4 xl:col-span-2">
-          <div className="grid grid-cols-2 gap-4">
-            <EnviadosTable
-              rows={envios.data?.enviados ?? []}
-              loading={envios.loading && !envios.data}
-              error={envios.error}
-              instancias={lista}
-            />
-            <AgendadosTable
-              rows={envios.data?.agendados ?? []}
-              loading={envios.loading && !envios.data}
-              error={envios.error}
-              instancias={lista}
-              filterDay={selectedDay}
-              onClearFilter={() => setSelectedDay(null)}
-              onChanged={handleChanged}
-            />
-          </div>
-          <CalendarioDisparos
+
+        {/* coluna direita flexível: Agendados → Enviados → Calendário */}
+        <div className="min-w-0 flex-1 space-y-4">
+          <AgendadosTable
+            rows={envios.data?.agendados ?? []}
+            loading={carregando}
+            error={envios.error}
             instancias={lista}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-            refreshKey={refreshKey}
+            filterDay={selectedDay}
+            onClearFilter={() => setSelectedDay(null)}
+            onChanged={handleChanged}
           />
+          <EnviadosTable rows={envios.data?.enviados ?? []} loading={carregando} error={envios.error} instancias={lista} />
+          <CalendarioDisparos instancias={lista} selectedDay={selectedDay} onSelectDay={setSelectedDay} refreshKey={refreshKey} />
         </div>
       </div>
     </>

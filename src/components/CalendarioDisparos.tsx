@@ -19,6 +19,7 @@ import {
   todaySP,
   type DayKey,
 } from '@/lib/dates'
+import { shortName } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Envio, Instancia } from '@/types/db'
 
@@ -118,20 +119,34 @@ export function CalendarioDisparos({ instancias, selectedDay, onSelectDay, refre
               return (
                 <Tooltip key={cell.key}>
                   <TooltipTrigger asChild>{cellEl}</TooltipTrigger>
-                  <TooltipContent side="top" className="w-72 rounded-xl border border-white/10 bg-[#18181b] p-3 text-xs text-gray-200">
+                  <TooltipContent
+                    side="top"
+                    align="center"
+                    avoidCollisions
+                    collisionPadding={16}
+                    sideOffset={6}
+                    className="block w-[360px] max-w-[360px] rounded-xl p-3 text-xs"
+                  >
                     <div className="mb-2 font-medium text-white">{dayKeyChartLabel(cell.key)}</div>
                     <ul className="space-y-1.5">
-                      {envios.slice(0, MAX_TOOLTIP_ROWS).map((e) => (
-                        <li key={e.id} className="flex items-center gap-2">
-                          <span className="w-10 shrink-0 text-gray-400 tabular-nums">{formatTime(e.agendado_para)}</span>
-                          <span className="min-w-0 flex-1 truncate">
-                            <span className="text-gray-400">{nomePorInstancia.get(e.instancia) ?? e.instancia}</span>
-                            <span className="text-gray-600"> · </span>
-                            <span className="text-gray-200">{e.grupo_nome ?? e.grupo_jid}</span>
-                          </span>
-                          <EnvioStatusBadge status={e.status} erro={e.erro} />
-                        </li>
-                      ))}
+                      {envios.slice(0, MAX_TOOLTIP_ROWS).map((e) => {
+                        const chat = shortName(nomePorInstancia.get(e.instancia) ?? e.instancia)
+                        const grupoNome = e.grupo_nome ?? e.grupo_jid
+                        return (
+                          <li key={e.id} className="flex min-w-0 items-center gap-2">
+                            <span className="w-10 shrink-0 whitespace-nowrap text-gray-400 tabular-nums">{formatTime(e.agendado_para)}</span>
+                            <span className="w-16 shrink-0 truncate text-gray-400" title={chat}>
+                              {chat}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-gray-200" title={grupoNome}>
+                              {grupoNome}
+                            </span>
+                            <span className="shrink-0">
+                              <EnvioStatusBadge status={e.status} erro={e.erro} />
+                            </span>
+                          </li>
+                        )
+                      })}
                     </ul>
                     {envios.length > MAX_TOOLTIP_ROWS && (
                       <div className="mt-2 text-gray-500 tabular-nums">+{envios.length - MAX_TOOLTIP_ROWS} mais</div>

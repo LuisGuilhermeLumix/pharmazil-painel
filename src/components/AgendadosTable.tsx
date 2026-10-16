@@ -12,14 +12,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TD, TH, TR } from '@/components/FollowupTable'
 import { cancelarEnvio } from '@/hooks/useEnvios'
-import { dayKeyChartLabel, formatAgendado, formatTime, isTodaySP, isoToDayKey, type DayKey } from '@/lib/dates'
-import { getAccentColor } from '@/lib/format'
+import { dayKeyChartLabel, formatAgendado, formatAgendadoShort, isoToDayKey, type DayKey } from '@/lib/dates'
+import { getAccentColor, shortName } from '@/lib/format'
 import type { Envio, Instancia } from '@/types/db'
 
 const HEADERS = ['Quando', 'Chat', 'Grupo', 'Conteúdo', '']
+/** Quando 16% · Chat 18% · Grupo 18% · Conteúdo restante · ação 12% */
+export const COL_WIDTHS = ['16%', '18%', '18%', 'auto', '12%']
 
 interface AgendadosTableProps {
   rows: Envio[]
@@ -79,9 +80,14 @@ export function AgendadosTable({ rows, loading, error, instancias, filterDay, on
         )}
       </div>
 
-      <div className={visiveis.length > 30 ? 'max-h-[420px] overflow-y-auto' : 'overflow-x-auto'}>
-        <table className="w-full border-collapse">
-          <thead>
+      <div className="max-h-[360px] overflow-y-auto">
+        <table className="w-full table-fixed border-collapse">
+          <colgroup>
+            {COL_WIDTHS.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
+          <thead className="sticky top-0 bg-[#111113]">
             <tr>
               {HEADERS.map((h, i) => (
                 <th key={i} className={TH}>
@@ -115,47 +121,42 @@ export function AgendadosTable({ rows, loading, error, instancias, filterDay, on
               </tr>
             ) : (
               visiveis.map((e) => {
-                const chat = nomePorInstancia.get(e.instancia) ?? e.instancia
-                const hoje = e.agendado_para ? isTodaySP(e.agendado_para) : false
+                const chatFull = nomePorInstancia.get(e.instancia) ?? e.instancia
+                const chat = shortName(chatFull)
+                const grupoNome = e.grupo_nome ?? e.grupo_jid
                 return (
                   <tr key={e.id} className={TR}>
-                    <td className={`${TD} whitespace-nowrap tabular-nums`}>
-                      <div className="text-xs text-gray-400">
-                        {hoje ? 'Hoje' : e.agendado_para ? dayKeyChartLabel(isoToDayKey(e.agendado_para)) : '—'}
-                      </div>
-                      <div className="text-sm font-medium text-white">{formatTime(e.agendado_para)}</div>
+                    <td className={`${TD} whitespace-nowrap text-white tabular-nums`} title={formatAgendado(e.agendado_para)}>
+                      <span className="block truncate">{formatAgendadoShort(e.agendado_para)}</span>
                     </td>
-                    <td className={`${TD} whitespace-nowrap text-gray-300`}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getAccentColor(chat) }} />
-                        {chat}
+                    <td className={`${TD} text-gray-300`} title={chatFull}>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getAccentColor(chatFull) }} />
+                        <span className="truncate">{chat}</span>
                       </span>
                     </td>
-                    <td className={`${TD} max-w-[140px] truncate font-medium text-white`}>{e.grupo_nome ?? e.grupo_jid}</td>
-                    <td className={`${TD} max-w-[180px]`}>
-                      <div className="flex items-center gap-2">
+                    <td className={`${TD} font-medium text-white`} title={grupoNome}>
+                      <span className="block truncate">{grupoNome}</span>
+                    </td>
+                    <td className={TD}>
+                      <div className="flex min-w-0 items-center gap-2">
                         {e.imagem_url ? (
-                          <img src={e.imagem_url} alt="" className="size-8 shrink-0 rounded-lg border border-white/10 object-cover" loading="lazy" />
+                          <img src={e.imagem_url} alt="" className="size-7 shrink-0 rounded-md border border-white/10 object-cover" loading="lazy" />
                         ) : (
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-white/[0.02] text-gray-600">
-                            <ImageIcon size={14} />
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-white/5 bg-white/[0.02] text-gray-600">
+                            <ImageIcon size={12} />
                           </span>
                         )}
                         {e.texto ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="min-w-0 cursor-default truncate text-xs text-gray-400">{e.texto}</span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-sm whitespace-pre-wrap">
-                              {e.texto}
-                            </TooltipContent>
-                          </Tooltip>
+                          <span className="min-w-0 truncate text-xs text-gray-400" title={e.texto}>
+                            {e.texto}
+                          </span>
                         ) : (
-                          <span className="text-xs text-gray-600">Somente imagem</span>
+                          <span className="truncate text-xs text-gray-600">Somente imagem</span>
                         )}
                       </div>
                     </td>
-                    <td className={`${TD} w-8 text-right`}>
+                    <td className={`${TD} text-right`}>
                       <button
                         type="button"
                         onClick={() => setCancelando(e)}

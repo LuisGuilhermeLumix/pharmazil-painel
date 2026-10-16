@@ -43,6 +43,12 @@ export function sanitizeFileName(name: string): string {
   return clean || 'imagem'
 }
 
+/** Nome curto do atendente para tabelas: remove o sufixo " Pharmazil" ("Thiago Pharmazil" → "Thiago"). */
+export function shortName(name: string | null | undefined): string {
+  if (!name) return '—'
+  return name.replace(/\s+pharmazil\s*$/i, '').trim() || name
+}
+
 export const ACCENT_PALETTE = [
   '#80d7f8',
   '#e65ff5',

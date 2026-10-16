@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { GerenciarGruposDialog } from '@/components/GerenciarGruposDialog'
+import { GrupoMultiSelect } from '@/components/GrupoMultiSelect'
 import { PILL_ACTIVE, PILL_BASE } from '@/components/layout/PeriodFilter'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -30,7 +31,7 @@ import { isConectada } from '@/hooks/useInstancias'
 import { dayKey, formatAgendado, spLocalToUtcIso, todaySP } from '@/lib/dates'
 import { formatBytes, formatPhone } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Instancia } from '@/types/db'
+import type { Grupo, Instancia } from '@/types/db'
 
 const LABEL = 'text-xs uppercase tracking-wider text-gray-400'
 const FIELD = 'h-9 w-full rounded-lg border-white/10 bg-white/[0.03] text-sm text-white'
@@ -42,6 +43,10 @@ export const GRADIENT_BTN =
 
 const MIN_FUTURO_MS = 5 * 60_000
 const LIMITE_CONCENTRACAO = 3
+/** Lote com 2+ grupos: começa em ~1 min quando for "Agora"… */
+const LOTE_INICIO_MS = 60_000
+/** …e escalona os grupos com 30 s entre si. */
+const LOTE_PASSO_MS = 30_000
 
 type Quando = 'agora' | 'agendar'
 
@@ -55,27 +60,41 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
   const { user } = useAuth()
   const conectadas = useMemo(() => instancias.filter(isConectada), [instancias])
   const [instanciaKey, setInstanciaKey] = useState<string>('')
-  const [grupoJid, setGrupoJid] = useState<string>('')
+  const [grupoJids, setGrupoJids] = useState<string[]>([])
   const [texto, setTexto] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [quando, setQuando] = useState<Quando>('agora')
   const [agData, setAgData] = useState('')
   const [agHora, setAgHora] = useState('')
-  const [concentracao, setConcentracao] = useState(0)
+  const [concentracaoDb, setConcentracaoDb] = useState(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [gruposOpen, setGruposOpen] = useState(false)
   const [sending, setSending] = useState(false)
+  const [progresso, setProgresso] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const instancia = conectadas.find((i) => i.instancia === instanciaKey) ?? null
   const grupos = useGrupos(instancia?.instancia ?? null)
   const gruposVisiveis = useMemo(() => (grupos.data ?? []).filter((g) => g.ativo && !g.oculto), [grupos.data])
-  const grupo = gruposVisiveis.find((g) => g.jid === grupoJid) ?? null
+  const selecionados = useMemo(
+    () => grupoJids.map((jid) => gruposVisiveis.find((g) => g.jid === jid)).filter((g): g is Grupo => !!g),
+    [grupoJids, gruposVisiveis],
+  )
 
+  // trocar de chat limpa a seleção
   useEffect(() => {
-    if (grupoJid && !gruposVisiveis.some((g) => g.jid === grupoJid)) setGrupoJid('')
-  }, [gruposVisiveis, grupoJid])
+    setGrupoJids([])
+  }, [instanciaKey])
+
+  // grupos que deixaram de estar visíveis saem da seleção
+  useEffect(() => {
+    if (grupos.loading) return
+    setGrupoJids((prev) => {
+      const next = prev.filter((jid) => gruposVisiveis.some((g) => g.jid === jid))
+      return next.length === prev.length ? prev : next
+    })
+  }, [gruposVisiveis, grupos.loading])
 
   useEffect(() => {
     if (!file) {
@@ -130,80 +149,127 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
     }
   }
 
+  const n = selecionados.length
+  const lote = n >= 2
   const textoLimpo = texto.trim()
   const validationError = !instancia
     ? 'Selecione o chat'
-    : !grupo
-      ? 'Selecione o grupo'
+    : n === 0
+      ? 'Selecione pelo menos um grupo'
       : !file && !textoLimpo
         ? 'Informe uma imagem ou um texto'
         : agendamentoError
 
+  /** Instante-base do lote (ou do agendamento simples). `null` = envio imediato de 1 grupo. */
+  function baseIso(): string | null {
+    if (agendadoIso) return agendadoIso
+    if (lote) return new Date(Date.now() + LOTE_INICIO_MS).toISOString()
+    return null
+  }
+
+  const concentracaoTotal = concentracaoDb + (lote || agendadoIso ? n : 0)
+
   function reset() {
-    setGrupoJid('')
+    setGrupoJids([])
     setTexto('')
     clearFile()
     setQuando('agora')
     setAgData('')
     setAgHora('')
-    setConcentracao(0)
+    setConcentracaoDb(0)
   }
 
   async function openConfirm() {
     if (!instancia) return
-    setConcentracao(0)
+    setConcentracaoDb(0)
     setConfirmOpen(true)
-    if (agendadoIso) {
+    const base = baseIso()
+    if (base) {
       try {
-        setConcentracao(await countAgendadosProximos(instancia.instancia, agendadoIso))
+        setConcentracaoDb(await countAgendadosProximos(instancia.instancia, base))
       } catch {
-        setConcentracao(0)
+        setConcentracaoDb(0)
       }
     }
   }
 
   async function handleConfirm() {
-    if (!instancia || !grupo) return
+    if (!instancia || n === 0) return
     setSending(true)
+    setProgresso(null)
     try {
+      // imagem sobe uma única vez; a mesma URL vai em todos os POSTs
       const imagem_url = file ? await uploadImagemDisparo(file) : null
-      const res = await enviarDisparo({
+      const base = baseIso()
+      const baseMs = base ? new Date(base).getTime() : 0
+      const comum = {
         instancia: instancia.instancia,
-        grupo_jid: grupo.jid,
-        grupo_nome: grupo.nome ?? grupo.jid,
         imagem_url,
         texto: textoLimpo || null,
-        ...(agendadoIso ? { agendado_para: agendadoIso } : {}),
         criado_por: user?.email ?? null,
-      })
-      if (res.ok) {
-        if (agendadoIso) {
-          toast.success(`Disparo agendado para ${formatAgendado(res.agendado_para ?? agendadoIso)}`, {
-            description: `${grupo.nome ?? grupo.jid} · ${instancia.nome}`,
+      }
+
+      const falhas: string[] = []
+      const okJids: string[] = []
+      for (let i = 0; i < n; i++) {
+        const g = selecionados[i]
+        const nome = g.nome ?? g.jid
+        if (lote) setProgresso(`Registrando ${i + 1} de ${n}: ${nome}`)
+        const agendado_para = base ? new Date(baseMs + (lote ? i * LOTE_PASSO_MS : 0)).toISOString() : undefined
+        try {
+          const res = await enviarDisparo({
+            ...comum,
+            grupo_jid: g.jid,
+            grupo_nome: nome,
+            ...(agendado_para ? { agendado_para } : {}),
+          })
+          if (res.ok) okJids.push(g.jid)
+          else falhas.push(`${nome}${res.erro ? ` (${res.erro})` : ''}`)
+        } catch (e) {
+          falhas.push(`${nome} (${e instanceof Error ? e.message : String(e)})`)
+        }
+      }
+
+      const okCount = okJids.length
+      if (okCount === n) {
+        if (lote) {
+          toast.success(`${n} disparos registrados`, {
+            description: `Em sequência a partir de ${formatAgendado(base)}, ~30 s entre cada grupo · ${instancia.nome}`,
+          })
+        } else if (agendadoIso) {
+          toast.success(`Disparo agendado para ${formatAgendado(agendadoIso)}`, {
+            description: `${selecionados[0].nome ?? selecionados[0].jid} · ${instancia.nome}`,
           })
         } else {
           toast.success('Disparo enviado', {
-            description: `${grupo.nome ?? grupo.jid} · ${instancia.nome}${res.status ? ` · ${res.status}` : ''}`,
+            description: `${selecionados[0].nome ?? selecionados[0].jid} · ${instancia.nome}`,
           })
         }
         setConfirmOpen(false)
         reset()
-        onSent()
+      } else if (okCount > 0) {
+        toast.warning(`${okCount} de ${n} registrados; falhou: ${falhas.join(', ')}`)
+        setConfirmOpen(false)
+        // mantém só os grupos que falharam, para tentar de novo
+        setGrupoJids((prev) => prev.filter((jid) => !okJids.includes(jid)))
       } else {
-        toast.error('Falha no disparo', { description: res.erro ?? 'O webhook retornou erro.' })
-        onSent()
+        toast.error('Falha no disparo', { description: falhas.join(', ') || 'O webhook retornou erro.' })
       }
+      onSent()
     } catch (e) {
       toast.error('Falha no disparo', { description: e instanceof Error ? e.message : String(e) })
     } finally {
       setSending(false)
+      setProgresso(null)
     }
   }
+
+  const confirmBase = baseIso()
 
   return (
     <Panel>
       <h3 className="text-sm font-semibold text-white">Novo disparo</h3>
-      <p className="text-xs text-gray-500">Envia uma imagem e/ou texto para um grupo do WhatsApp.</p>
+      <p className="text-xs text-gray-500">Envia uma imagem e/ou texto para um ou mais grupos do WhatsApp.</p>
 
       <div className="mt-5 space-y-4">
         {/* Chat */}
@@ -230,31 +296,24 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           )}
         </div>
 
-        {/* Grupo */}
+        {/* Grupos */}
         <div className="space-y-1.5">
-          <Label className={LABEL}>Grupo</Label>
-          <Select value={grupoJid} onValueChange={setGrupoJid} disabled={!instancia || grupos.loading}>
-            <SelectTrigger className={FIELD}>
-              <SelectValue
-                placeholder={
-                  !instancia
-                    ? 'Selecione o chat primeiro'
-                    : grupos.loading
-                      ? 'Carregando grupos…'
-                      : gruposVisiveis.length
-                        ? 'Selecione o grupo'
-                        : 'Nenhum grupo visível'
-                }
-              />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-white/10 bg-[#111113]">
-              {gruposVisiveis.map((g) => (
-                <SelectItem key={g.id} value={g.jid}>
-                  {g.nome ?? g.jid}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className={LABEL}>Grupos</Label>
+          <GrupoMultiSelect
+            grupos={gruposVisiveis}
+            value={grupoJids}
+            onChange={setGrupoJids}
+            disabled={!instancia || grupos.loading}
+            placeholder={
+              !instancia
+                ? 'Selecione o chat primeiro'
+                : grupos.loading
+                  ? 'Carregando grupos…'
+                  : gruposVisiveis.length
+                    ? 'Selecione os grupos'
+                    : 'Nenhum grupo visível'
+            }
+          />
           {instancia && (
             <button
               type="button"
@@ -343,7 +402,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
                   min={hojeKey}
                   onChange={(e) => setAgData(e.target.value)}
                   aria-label="Data do agendamento"
-                  className={cn(DATE_FIELD, 'flex-1')}
+                  className={cn(DATE_FIELD, 'min-w-0 flex-1')}
                 />
                 <input
                   type="time"
@@ -356,11 +415,14 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Horário de Brasília</span>
-                {agendamentoError && (agData || agHora) && (
-                  <span className="text-xs text-[#ef4444]">{agendamentoError}</span>
-                )}
+                {agendamentoError && (agData || agHora) && <span className="text-xs text-[#ef4444]">{agendamentoError}</span>}
               </div>
             </div>
+          )}
+          {lote && (
+            <p className="text-xs text-gray-500">
+              Com {n} grupos, os envios saem em sequência (~30 s entre cada){quando === 'agora' ? ', começando em ~1 minuto' : ''}.
+            </p>
           )}
         </div>
 
@@ -373,6 +435,7 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
         >
           <Send size={16} />
           {agendar ? 'Agendar envio' : 'Enviar agora'}
+          {lote ? ` (${n} grupos)` : ''}
         </Button>
         {validationError && <p className="text-center text-[11px] text-gray-500">{validationError}</p>}
       </div>
@@ -381,46 +444,82 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
       <Dialog open={confirmOpen} onOpenChange={(o) => !sending && setConfirmOpen(o)}>
         <DialogContent className={`${DIALOG} sm:max-w-md`}>
           <DialogHeader>
-            <DialogTitle>{agendadoIso ? 'Confirmar agendamento' : 'Confirmar disparo'}</DialogTitle>
+            <DialogTitle>{agendadoIso ? 'Confirmar agendamento' : lote ? 'Confirmar disparo em lote' : 'Confirmar disparo'}</DialogTitle>
             <DialogDescription>
               {agendadoIso ? (
                 <>
-                  Agendar para <span className="font-semibold text-white">{formatAgendado(agendadoIso)}</span>, em{' '}
-                  <span className="font-semibold text-white">{grupo?.nome ?? grupo?.jid}</span> pelo chat{' '}
-                  <span className="font-semibold text-white">{instancia?.nome}</span>?
+                  Agendar para <span className="font-semibold text-white">{formatAgendado(agendadoIso)}</span> pelo chat{' '}
+                  <span className="font-semibold text-white">{instancia?.nome}</span>
                 </>
               ) : (
                 <>
-                  Enviar para <span className="font-semibold text-white">{grupo?.nome ?? grupo?.jid}</span> pelo chat{' '}
-                  <span className="font-semibold text-white">{instancia?.nome}</span>?
+                  Enviar pelo chat <span className="font-semibold text-white">{instancia?.nome}</span>
                 </>
-              )}
+              )}{' '}
+              para {n === 1 ? 'o grupo' : `${n} grupos`}:
             </DialogDescription>
           </DialogHeader>
 
-          {agendadoIso && concentracao >= LIMITE_CONCENTRACAO && (
+          <ul className="max-h-32 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-xs">
+            {selecionados.map((g, i) => (
+              <li key={g.jid} className="flex items-center gap-2">
+                {lote && <span className="w-4 shrink-0 text-gray-500 tabular-nums">{i + 1}.</span>}
+                <span className="min-w-0 truncate text-gray-200" title={g.nome ?? g.jid}>
+                  {g.nome ?? g.jid}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {lote && (
+            <p className="text-xs text-gray-400">
+              Os envios serão feitos em sequência, com ~30 s entre cada grupo
+              {!agendadoIso ? ', começando em ~1 minuto' : ''}.
+            </p>
+          )}
+
+          {confirmBase && concentracaoTotal >= LIMITE_CONCENTRACAO && (
             <div className="flex gap-2.5 rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-2.5 text-xs text-[#f59e0b]">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <span>
-                Já existem <span className="font-semibold tabular-nums">{concentracao}</span> disparos agendados para este número
-                nesse horário. Enviar muitos grupos ao mesmo tempo aumenta o risco de bloqueio do WhatsApp.
+                {concentracaoDb > 0 ? (
+                  <>
+                    Já existem <span className="font-semibold tabular-nums">{concentracaoDb}</span> disparos agendados para este número
+                    nesse horário{lote ? <> e esta seleção adiciona mais <span className="font-semibold tabular-nums">{n}</span></> : null}.
+                  </>
+                ) : (
+                  <>
+                    Esta seleção agenda <span className="font-semibold tabular-nums">{n}</span> disparos para este número no mesmo horário.
+                  </>
+                )}{' '}
+                Enviar muitos grupos ao mesmo tempo aumenta o risco de bloqueio do WhatsApp.
               </span>
             </div>
           )}
 
           <div className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
-            {preview && <img src={preview} alt="Pré-visualização" className="max-h-64 w-full object-contain" />}
+            {preview && <img src={preview} alt="Pré-visualização" className="max-h-56 w-full object-contain" />}
             {textoLimpo && (
-              <p className="max-h-40 overflow-y-auto px-4 py-3 text-sm whitespace-pre-wrap text-gray-200">{textoLimpo}</p>
+              <p className="max-h-32 overflow-y-auto px-4 py-3 text-sm whitespace-pre-wrap text-gray-200">{textoLimpo}</p>
             )}
           </div>
+
+          {progresso && <p className="text-xs text-gray-400 tabular-nums">{progresso}</p>}
 
           <DialogFooter className="rounded-b-2xl">
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={sending} className="text-gray-400 hover:text-white">
               Cancelar
             </Button>
             <Button onClick={() => void handleConfirm()} disabled={sending} className={cn('rounded-lg', GRADIENT_BTN)}>
-              {sending ? (agendadoIso ? 'Agendando…' : 'Enviando…') : agendadoIso ? 'Confirmar agendamento' : 'Confirmar envio'}
+              {sending
+                ? agendadoIso || lote
+                  ? 'Registrando…'
+                  : 'Enviando…'
+                : agendadoIso
+                  ? 'Confirmar agendamento'
+                  : lote
+                    ? `Confirmar ${n} envios`
+                    : 'Confirmar envio'}
             </Button>
           </DialogFooter>
         </DialogContent>
