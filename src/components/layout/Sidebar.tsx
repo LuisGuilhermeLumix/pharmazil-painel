@@ -23,13 +23,16 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 flex w-44 flex-col border-r border-white/[0.06] bg-[#0a0a0a]">
       <div className="flex items-center border-b border-white/[0.06] px-4 py-4">
         <img
-          src="/lumix-logo.svg"
-          alt="Lumix"
-          className="h-7 w-auto"
+          src="/pharmazil-logo.png"
+          alt="Pharmazil"
+          className="h-8 w-auto"
           onError={(e) => {
-            // fallback enquanto public/lumix-logo.svg não estiver na pasta
+            // enquanto public/pharmazil-logo.png não estiver na pasta, mostra o nome
             e.currentTarget.onerror = null
-            e.currentTarget.src = '/lumix.svg'
+            e.currentTarget.replaceWith(Object.assign(document.createElement('span'), {
+              className: 'text-sm font-semibold text-white',
+              textContent: 'Pharmazil',
+            }))
           }}
         />
       </div>
@@ -53,6 +56,10 @@ export function Sidebar() {
         </ul>
 
         <div className="mt-auto border-t border-white/[0.06] py-2">
+          <div className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] text-gray-500">
+            <span>powered by</span>
+            <img src="/lumix-logo.png" alt="Lumix" className="h-4 w-auto opacity-60" />
+          </div>
           <button type="button" onClick={() => void handleSignOut()} className={ITEM}>
             <LogOut size={16} className="shrink-0" />
             Sair

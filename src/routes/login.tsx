@@ -42,13 +42,18 @@ function LoginPage() {
       <Panel className="w-[380px] p-8">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <img
-            src="/lumix-logo.svg"
-            alt="Lumix"
-            className="h-9 w-auto"
+            src="/pharmazil-logo.png"
+            alt="Pharmazil"
+            className="h-10 w-auto"
             onError={(e) => {
-              // fallback enquanto public/lumix-logo.svg não estiver na pasta
+              // enquanto public/pharmazil-logo.png não estiver na pasta, mostra o nome
               e.currentTarget.onerror = null
-              e.currentTarget.src = '/lumix.svg'
+              e.currentTarget.replaceWith(
+                Object.assign(document.createElement('span'), {
+                  className: 'text-lg font-semibold text-white',
+                  textContent: 'Pharmazil',
+                }),
+              )
             }}
           />
           <p className="text-xs text-gray-500">Entre com sua conta para acessar o painel</p>
