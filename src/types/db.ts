@@ -1,7 +1,7 @@
 /** Tipos das tabelas/views do schema `public` usadas pelo painel. */
 
 export type FollowupStatus = 'nenhum' | 'em_andamento' | 'respondeu' | 'esgotado' | 'encerrado'
-export type EnvioStatus = 'pendente' | 'enviado' | 'erro'
+export type EnvioStatus = 'pendente' | 'enviado' | 'erro' | 'agendado' | 'cancelado'
 
 export interface Instancia {
   id: number
@@ -69,15 +69,19 @@ export interface Envio {
   evolution_message_id: string | null
   criado_em: string
   enviado_em: string | null
+  /** ISO UTC; preenchido quando o disparo foi (ou está) agendado */
+  agendado_para: string | null
+  /** e-mail do usuário que criou o disparo */
+  criado_por: string | null
 }
 
 export interface FollowupConfig {
   id: number
   ativo: boolean
-  max_etapas: number
-  etapa1_horas: number
-  etapa2_horas: number
-  etapa3_horas: number
+  /** horas de cada etapa, ex.: [24, 48, 96]; 1 a 5 itens, inteiros >= 1 */
+  etapas_horas: number[]
+  /** coluna gerada = etapas_horas.length (somente leitura, nunca enviar no update) */
+  readonly max_etapas: number
   janela_inicio: number
   janela_fim: number
   timezone: string | null
@@ -107,6 +111,10 @@ export interface DisparoPayload {
   grupo_nome: string
   imagem_url: string | null
   texto: string | null
+  /** ISO 8601 em UTC; ausente = enviar agora */
+  agendado_para?: string
+  /** e-mail do usuário logado */
+  criado_por?: string | null
 }
 
 /** Resposta do webhook do n8n de disparo. */
@@ -115,4 +123,5 @@ export interface DisparoResponse {
   envio_id?: number | string | null
   status?: EnvioStatus | string | null
   erro?: string | null
+  agendado_para?: string | null
 }

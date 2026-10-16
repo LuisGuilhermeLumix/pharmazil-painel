@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ImagePlus, Send, X } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ImagePlus, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Panel } from '@/components/Panel'
 import { Button } from '@/components/ui/button'
@@ -16,15 +16,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { GerenciarGruposDialog } from '@/components/GerenciarGruposDialog'
-import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, enviarDisparo, uploadImagemDisparo } from '@/hooks/useEnvios'
+import { PILL_ACTIVE, PILL_BASE } from '@/components/layout/PeriodFilter'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  countAgendadosProximos,
+  enviarDisparo,
+  uploadImagemDisparo,
+} from '@/hooks/useEnvios'
 import { useGrupos } from '@/hooks/useGrupos'
 import { isConectada } from '@/hooks/useInstancias'
+import { dayKey, formatAgendado, spLocalToUtcIso, todaySP } from '@/lib/dates'
 import { formatBytes, formatPhone } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { Instancia } from '@/types/db'
 
 const LABEL = 'text-xs uppercase tracking-wider text-gray-400'
 const FIELD = 'h-9 w-full rounded-lg border-white/10 bg-white/[0.03] text-sm text-white'
+const DATE_FIELD =
+  'h-9 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-sm text-white tabular-nums [color-scheme:dark]'
 export const DIALOG = 'rounded-2xl border-white/10 bg-[#111113]'
+export const GRADIENT_BTN =
+  'bg-gradient-to-r from-[#80d7f8] to-[#e65ff5] font-semibold text-[#0a0a0a] hover:opacity-90 disabled:opacity-40'
+
+const MIN_FUTURO_MS = 5 * 60_000
+const LIMITE_CONCENTRACAO = 3
+
+type Quando = 'agora' | 'agendar'
 
 interface DisparoFormProps {
   instancias: Instancia[]
@@ -33,12 +52,17 @@ interface DisparoFormProps {
 }
 
 export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFormProps) {
+  const { user } = useAuth()
   const conectadas = useMemo(() => instancias.filter(isConectada), [instancias])
   const [instanciaKey, setInstanciaKey] = useState<string>('')
   const [grupoJid, setGrupoJid] = useState<string>('')
   const [texto, setTexto] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [quando, setQuando] = useState<Quando>('agora')
+  const [agData, setAgData] = useState('')
+  const [agHora, setAgHora] = useState('')
+  const [concentracao, setConcentracao] = useState(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [gruposOpen, setGruposOpen] = useState(false)
   const [sending, setSending] = useState(false)
@@ -84,6 +108,28 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
     if (fileInput.current) fileInput.current.value = ''
   }
 
+  // --- agendamento ----------------------------------------------------------
+  const hojeKey = dayKey(todaySP())
+  const agendar = quando === 'agendar'
+  let agendadoIso: string | null = null
+  let agendamentoError: string | null = null
+  if (agendar) {
+    if (!agData || !agHora) {
+      agendamentoError = 'Informe data e hora do agendamento'
+    } else {
+      try {
+        const iso = spLocalToUtcIso(agData, agHora)
+        if (new Date(iso).getTime() - Date.now() < MIN_FUTURO_MS) {
+          agendamentoError = 'O horário precisa ser pelo menos 5 minutos no futuro'
+        } else {
+          agendadoIso = iso
+        }
+      } catch {
+        agendamentoError = 'Data ou hora inválida'
+      }
+    }
+  }
+
   const textoLimpo = texto.trim()
   const validationError = !instancia
     ? 'Selecione o chat'
@@ -91,12 +137,29 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
       ? 'Selecione o grupo'
       : !file && !textoLimpo
         ? 'Informe uma imagem ou um texto'
-        : null
+        : agendamentoError
 
   function reset() {
     setGrupoJid('')
     setTexto('')
     clearFile()
+    setQuando('agora')
+    setAgData('')
+    setAgHora('')
+    setConcentracao(0)
+  }
+
+  async function openConfirm() {
+    if (!instancia) return
+    setConcentracao(0)
+    setConfirmOpen(true)
+    if (agendadoIso) {
+      try {
+        setConcentracao(await countAgendadosProximos(instancia.instancia, agendadoIso))
+      } catch {
+        setConcentracao(0)
+      }
+    }
   }
 
   async function handleConfirm() {
@@ -110,11 +173,19 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
         grupo_nome: grupo.nome ?? grupo.jid,
         imagem_url,
         texto: textoLimpo || null,
+        ...(agendadoIso ? { agendado_para: agendadoIso } : {}),
+        criado_por: user?.email ?? null,
       })
       if (res.ok) {
-        toast.success('Disparo enviado', {
-          description: `${grupo.nome ?? grupo.jid} · ${instancia.nome}${res.status ? ` · ${res.status}` : ''}`,
-        })
+        if (agendadoIso) {
+          toast.success(`Disparo agendado para ${formatAgendado(res.agendado_para ?? agendadoIso)}`, {
+            description: `${grupo.nome ?? grupo.jid} · ${instancia.nome}`,
+          })
+        } else {
+          toast.success('Disparo enviado', {
+            description: `${grupo.nome ?? grupo.jid} · ${instancia.nome}${res.status ? ` · ${res.status}` : ''}`,
+          })
+        }
         setConfirmOpen(false)
         reset()
         onSent()
@@ -250,15 +321,58 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
           />
         </div>
 
+        {/* Quando enviar */}
+        <div className="space-y-2">
+          <Label className={LABEL}>Quando enviar</Label>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setQuando('agora')} className={cn(PILL_BASE, quando === 'agora' && PILL_ACTIVE)}>
+              <Send size={14} />
+              Agora
+            </button>
+            <button type="button" onClick={() => setQuando('agendar')} className={cn(PILL_BASE, agendar && PILL_ACTIVE)}>
+              <CalendarClock size={14} />
+              Agendar
+            </button>
+          </div>
+          {agendar && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={agData}
+                  min={hojeKey}
+                  onChange={(e) => setAgData(e.target.value)}
+                  aria-label="Data do agendamento"
+                  className={cn(DATE_FIELD, 'flex-1')}
+                />
+                <input
+                  type="time"
+                  value={agHora}
+                  step={300}
+                  onChange={(e) => setAgHora(e.target.value)}
+                  aria-label="Hora do agendamento"
+                  className={cn(DATE_FIELD, 'w-28')}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Horário de Brasília</span>
+                {agendamentoError && (agData || agHora) && (
+                  <span className="text-xs text-[#ef4444]">{agendamentoError}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <Button
           type="button"
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => void openConfirm()}
           disabled={!!validationError || sending}
           title={validationError ?? undefined}
-          className="h-9 w-full rounded-lg bg-[#f97316] text-white hover:bg-[#ea580c] disabled:opacity-50"
+          className={cn('h-9 w-full rounded-lg', GRADIENT_BTN)}
         >
           <Send size={16} />
-          Enviar
+          {agendar ? 'Agendar envio' : 'Enviar agora'}
         </Button>
         {validationError && <p className="text-center text-[11px] text-gray-500">{validationError}</p>}
       </div>
@@ -267,12 +381,32 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
       <Dialog open={confirmOpen} onOpenChange={(o) => !sending && setConfirmOpen(o)}>
         <DialogContent className={`${DIALOG} sm:max-w-md`}>
           <DialogHeader>
-            <DialogTitle>Confirmar disparo</DialogTitle>
+            <DialogTitle>{agendadoIso ? 'Confirmar agendamento' : 'Confirmar disparo'}</DialogTitle>
             <DialogDescription>
-              Enviar para <span className="font-semibold text-white">{grupo?.nome ?? grupo?.jid}</span> pelo chat{' '}
-              <span className="font-semibold text-white">{instancia?.nome}</span>?
+              {agendadoIso ? (
+                <>
+                  Agendar para <span className="font-semibold text-white">{formatAgendado(agendadoIso)}</span>, em{' '}
+                  <span className="font-semibold text-white">{grupo?.nome ?? grupo?.jid}</span> pelo chat{' '}
+                  <span className="font-semibold text-white">{instancia?.nome}</span>?
+                </>
+              ) : (
+                <>
+                  Enviar para <span className="font-semibold text-white">{grupo?.nome ?? grupo?.jid}</span> pelo chat{' '}
+                  <span className="font-semibold text-white">{instancia?.nome}</span>?
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
+
+          {agendadoIso && concentracao >= LIMITE_CONCENTRACAO && (
+            <div className="flex gap-2.5 rounded-xl border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-2.5 text-xs text-[#f59e0b]">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>
+                Já existem <span className="font-semibold tabular-nums">{concentracao}</span> disparos agendados para este número
+                nesse horário. Enviar muitos grupos ao mesmo tempo aumenta o risco de bloqueio do WhatsApp.
+              </span>
+            </div>
+          )}
 
           <div className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
             {preview && <img src={preview} alt="Pré-visualização" className="max-h-64 w-full object-contain" />}
@@ -285,8 +419,8 @@ export function DisparoForm({ instancias, loadingInstancias, onSent }: DisparoFo
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={sending} className="text-gray-400 hover:text-white">
               Cancelar
             </Button>
-            <Button onClick={() => void handleConfirm()} disabled={sending} className="rounded-lg bg-[#f97316] text-white hover:bg-[#ea580c]">
-              {sending ? 'Enviando…' : 'Confirmar envio'}
+            <Button onClick={() => void handleConfirm()} disabled={sending} className={cn('rounded-lg', GRADIENT_BTN)}>
+              {sending ? (agendadoIso ? 'Agendando…' : 'Enviando…') : agendadoIso ? 'Confirmar agendamento' : 'Confirmar envio'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -10,7 +10,8 @@ import {
   type Period,
 } from '@/lib/dates'
 import { getAccentColor, getEtapaColor, pctOf } from '@/lib/format'
-import type { Conversa, Followup, FollowupMetricasView, FollowupStatus, Instancia } from '@/types/db'
+import type { Conversa, Followup, FollowupConfig, FollowupMetricasView, FollowupStatus, Instancia } from '@/types/db'
+import { fetchFollowupConfig } from './useFollowupConfig'
 import { useAsync } from './useAsync'
 
 export interface FollowupRow {
@@ -54,6 +55,7 @@ export interface FollowupMetrics {
   /** métricas all-time por instância (da view) */
   view: FollowupMetricasView[]
   instancias: Instancia[]
+  config: FollowupConfig | null
 }
 
 interface RawData {
@@ -61,6 +63,7 @@ interface RawData {
   conversas: Map<number, Conversa>
   instancias: Instancia[]
   view: FollowupMetricasView[]
+  config: FollowupConfig | null
 }
 
 async function fetchRaw(period: Period): Promise<RawData> {
@@ -89,7 +92,12 @@ async function fetchRaw(period: Period): Promise<RawData> {
       return (data ?? []) as FollowupMetricasView[]
     })
 
-  const [followups, instancias, view] = await Promise.all([followupsPromise, instanciasPromise, viewPromise])
+  const [followups, instancias, view, config] = await Promise.all([
+    followupsPromise,
+    instanciasPromise,
+    viewPromise,
+    fetchFollowupConfig().catch(() => null),
+  ])
 
   const ids = Array.from(new Set(followups.map((f) => f.conversation_id)))
   const conversas = new Map<number, Conversa>()
@@ -104,11 +112,11 @@ async function fetchRaw(period: Period): Promise<RawData> {
     for (const c of (data ?? []) as Conversa[]) conversas.set(c.conversation_id, c)
   }
 
-  return { followups, conversas, instancias, view }
+  return { followups, conversas, instancias, view, config }
 }
 
 function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
-  const { followups, conversas, instancias, view } = raw
+  const { followups, conversas, instancias, view, config } = raw
   const range = resolvePeriod(period)
 
   const byInbox = new Map<number, Instancia>()
@@ -179,7 +187,9 @@ function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
 
   const taxa = pctOf(recuperados, leadsEmFollowup)
 
-  const etapas = Array.from(new Set([1, 2, 3, ...porEtapaMap.keys()])).sort((a, b) => a - b)
+  // Etapas = as configuradas hoje ∪ as que aparecem nos dados do período.
+  const configuradas = Array.from({ length: config?.etapas_horas.length ?? 0 }, (_, i) => i + 1)
+  const etapas = Array.from(new Set([...configuradas, ...porEtapaMap.keys()])).sort((a, b) => a - b)
   const porEtapa: BreakdownItem[] = etapas.map((e) => ({
     label: `Etapa ${e}`,
     value: porEtapaMap.get(e) ?? 0,
@@ -191,9 +201,7 @@ function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
     color: getEtapaColor(e),
   }))
 
-  const atendentes = Array.from(
-    new Set([...instancias.map((i) => i.nome), ...enviadosPorAtendenteMap.keys()]),
-  )
+  const atendentes = Array.from(new Set([...instancias.map((i) => i.nome), ...enviadosPorAtendenteMap.keys()]))
   const enviadosPorAtendente: BreakdownItem[] = atendentes.map((a) => ({
     label: a,
     value: enviadosPorAtendenteMap.get(a) ?? 0,
@@ -251,17 +259,18 @@ function computeMetrics(raw: RawData, period: Period): FollowupMetrics {
     rows,
     view,
     instancias,
+    config,
   }
 }
 
-export function useFollowupMetrics(period: Period) {
+export function useFollowupMetrics(period: Period, refreshKey = 0) {
   const key = `${period.preset}|${period.from ?? ''}|${period.to ?? ''}|${dayKey(
     // inclui o dia atual na chave para refazer a consulta quando virar o dia
     (() => {
       const r = resolvePeriod(period)
       return r ? r.endDay : { y: 0, m: 0, d: 0 }
     })(),
-  )}`
+  )}|${refreshKey}`
   const state = useAsync<RawData>(() => fetchRaw(period), [key])
   const metrics = useMemo(
     () => (state.data ? computeMetrics(state.data, period) : null),

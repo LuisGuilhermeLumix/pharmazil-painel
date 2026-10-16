@@ -53,6 +53,17 @@ const ENVIO: Record<EnvioStatus, { label: string; tone: BadgeTone }> = {
   enviado: { label: 'Enviado', tone: 'green' },
   erro: { label: 'Erro', tone: 'red' },
   pendente: { label: 'Pendente', tone: 'yellow' },
+  agendado: { label: 'Agendado', tone: 'blue' },
+  cancelado: { label: 'Cancelado', tone: 'gray' },
+}
+
+/** Cor (hex) de cada status de envio, para bolinhas do calendário. */
+export const ENVIO_STATUS_COLOR: Record<EnvioStatus, string> = {
+  enviado: COLORS.green,
+  erro: COLORS.red,
+  pendente: COLORS.yellow,
+  agendado: COLORS.blue,
+  cancelado: COLORS.gray,
 }
 
 export function EnvioStatusBadge({ status, erro }: { status: EnvioStatus | string; erro?: string | null }) {

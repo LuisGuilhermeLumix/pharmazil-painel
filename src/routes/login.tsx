@@ -81,7 +81,11 @@ function LoginPage() {
             <p className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#ef4444]">{error}</p>
           )}
 
-          <Button type="submit" disabled={loading} className="h-9 w-full rounded-lg bg-[#80d7f8] text-[#0a0a0a] hover:bg-[#9ee1fa]">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-9 w-full rounded-lg bg-gradient-to-r from-[#80d7f8] to-[#e65ff5] font-semibold text-[#0a0a0a] hover:opacity-90 disabled:opacity-40"
+          >
             {loading ? 'Entrando…' : 'Entrar'}
           </Button>
         </form>

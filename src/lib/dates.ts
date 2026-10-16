@@ -170,6 +170,93 @@ export function formatShortDate(iso: string | null | undefined): string {
   return shortDateFormatter.format(new Date(iso))
 }
 
+const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: TZ,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+/** Formata um timestamptz ISO como "HH:mm" em SP. */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return timeFormatter.format(new Date(iso))
+}
+
+/** "15 de out. às 10:00" (em SP). */
+export function formatAgendado(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return `${dayKeyChartLabel(isoToDayKey(iso))} às ${formatTime(iso)}`
+}
+
+export function isTodaySP(iso: string): boolean {
+  return isoToDayKey(iso) === dayKey(todaySP())
+}
+
+/**
+ * Converte data (yyyy-mm-dd) + hora (HH:mm) "de parede" em America/Sao_Paulo
+ * para ISO UTC. Nunca use `new Date('YYYY-MM-DDTHH:mm')`, que usa o fuso do navegador.
+ */
+export function spLocalToUtcIso(date: string, time: string): string {
+  const d = parseDayKey(date)
+  const m = /^(\d{2}):(\d{2})$/.exec(time)
+  if (!d || !m) throw new Error('Data ou hora inválida')
+  return zonedToUtc(d, Number(m[1]), Number(m[2])).toISOString()
+}
+
+// ---------------------------------------------------------------------------
+// Calendário mensal
+// ---------------------------------------------------------------------------
+
+export type YearMonth = { y: number; m: number }
+
+export function currentYearMonth(): YearMonth {
+  const t = todaySP()
+  return { y: t.y, m: t.m }
+}
+
+export function shiftMonth(ym: YearMonth, n: number): YearMonth {
+  const t = new Date(Date.UTC(ym.y, ym.m - 1 + n, 1))
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1 }
+}
+
+const monthFormatter = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', month: 'long', year: 'numeric' })
+
+/** "Outubro de 2026" */
+export function monthLabel(ym: YearMonth): string {
+  const s = monthFormatter.format(new Date(Date.UTC(ym.y, ym.m - 1, 15)))
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** Intervalo [inicio, fim) do mês em UTC, construído em SP. */
+export function monthRangeIso(ym: YearMonth): { startIso: string; endIso: string } {
+  const next = shiftMonth(ym, 1)
+  return {
+    startIso: zonedToUtc({ y: ym.y, m: ym.m, d: 1 }).toISOString(),
+    endIso: zonedToUtc({ y: next.y, m: next.m, d: 1 }).toISOString(),
+  }
+}
+
+export type CalendarCell = { key: DayKey; day: number; inMonth: boolean }
+
+/** Grade do mês: semanas (domingo a sábado) com dias vizinhos preenchendo as pontas. */
+export function calendarGrid(ym: YearMonth): CalendarCell[][] {
+  const first: DayParts = { y: ym.y, m: ym.m, d: 1 }
+  const firstWeekday = new Date(Date.UTC(ym.y, ym.m - 1, 1)).getUTCDay()
+  const daysInMonth = new Date(Date.UTC(ym.y, ym.m, 0)).getUTCDate()
+  const start = addDays(first, -firstWeekday)
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7
+  const weeks: CalendarCell[][] = []
+  for (let i = 0; i < totalCells; i++) {
+    const d = addDays(start, i)
+    if (i % 7 === 0) weeks.push([])
+    weeks[weeks.length - 1].push({ key: dayKey(d), day: d.d, inMonth: d.m === ym.m && d.y === ym.y })
+  }
+  return weeks
+}
+
+export const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 // ---------------------------------------------------------------------------
 // Período
 // ---------------------------------------------------------------------------

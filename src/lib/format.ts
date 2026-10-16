@@ -61,10 +61,12 @@ export function getAccentColor(name: string): string {
   return ACCENT_PALETTE[h % ACCENT_PALETTE.length]
 }
 
-export const ETAPA_COLORS: Record<number, string> = { 1: '#f59e0b', 2: '#3b82f6', 3: '#a78bfa' }
+export const ETAPA_PALETTE = ['#f59e0b', '#3b82f6', '#a78bfa', '#ec4899', '#f97316'] as const
 
+/** Cor da etapa (1-based) pela paleta, por índice. */
 export function getEtapaColor(etapa: number): string {
-  return ETAPA_COLORS[etapa] ?? '#6b7280'
+  const i = Math.max(0, Math.round(etapa) - 1)
+  return ETAPA_PALETTE[i % ETAPA_PALETTE.length]
 }
 
 export function formatBytes(bytes: number): string {

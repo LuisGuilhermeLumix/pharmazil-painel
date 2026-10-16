@@ -19,7 +19,8 @@ export const Route = createFileRoute('/_app/')({
 
 function FollowupPage() {
   const [period, setPeriod] = useState<Period>({ preset: 'mes' })
-  const { metrics, loading, error } = useFollowupMetrics(period)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const { metrics, loading, error } = useFollowupMetrics(period, refreshKey)
   const instancias = useInstancias()
 
   const m = metrics
@@ -29,7 +30,7 @@ function FollowupPage() {
     <>
       <PageHeader title="Follow-up">
         <PeriodFilter value={period} onChange={setPeriod} />
-        <ConfigDialog />
+        <ConfigDialog onSaved={() => setRefreshKey((k) => k + 1)} />
       </PageHeader>
 
       {error && (
